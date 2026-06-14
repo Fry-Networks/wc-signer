@@ -1,0 +1,510 @@
+thods on deployed FryGovernance contracts</p>
+
+
+
+    <div class="card" id="params-card">
+
+      <div class="card-title">Call Parameters</div>
+
+      <div class="info-row">
+
+        <span class="info-label">Network:</span>
+
+        <span class="info-value" id="display-network">-</span>
+
+      </div>
+
+      <div class="info-row">
+
+        <span class="info-label">App ID:</span>
+
+        <span class="info-value" id="display-appid">-</span>
+
+      </div>
+
+      <div class="info-row">
+
+        <span class="info-label">Method:</span>
+
+        <span class="info-value" id="display-method">-</span>
+
+      </div>
+
+      <div class="info-row">
+
+        <span class="info-label">Args:</span>
+
+        <span class="info-value" id="display-args">-</span>
+
+      </div>
+
+    </div>
+
+
+
+    <div class="card" id="wallet-card">
+
+      <div class="card-title">Wallet Connection</div>
+
+      <button id="connect-btn">Connect Pera Wallet</button>
+
+      <div class="status hidden" id="wallet-status">
+
+        <div class="status-dot" id="wallet-dot"></div>
+
+        <span id="wallet-text">Not connected</span>
+
+      </div>
+
+    </div>
+
+
+
+    <div class="card hidden" id="qr-card">
+
+      <div class="card-title">Scan QR Code with Pera Wallet</div>
+
+      <div id="qr-container"></div>
+
+    </div>
+
+
+
+    <div class="card hidden" id="execute-card">
+
+      <div class="card-title">Transaction</div>
+
+      <button id="execute-btn">Build & Sign Transaction</button>
+
+    </div>
+
+
+
+    <div class="card hidden" id="result-card">
+
+      <div class="card-title">Result</div>
+
+      <div id="result-container"></div>
+
+    </div>
+
+
+
+    <div class="card hidden" id="error-card">
+
+      <div class="card-title">Error</div>
+
+      <div class="error-message" id="error-message"></div>
+
+    </div>
+
+  </div>
+
+
+
+  <script src="/bundle.js"></script>
+
+  <script>
+
+    const NETWORK_CONFIG = {
+
+      mainnet: { algodUrl: 'https://mainnet-api.algonode.cloud', chainId: 416001, name: 'Mainnet' },
+
+      testnet: { algodUrl: 'https://testnet-api.algonode.cloud', chainId: 416002, name: 'Testnet' },
+
+      localnet: { algodUrl: 'http://localhost:4001', chainId: 416002, name: 'Localnet' }
+
+    };
+
+
+
+    const { PeraWalletConnect, sha512_256 } = window;
+
+    const algosdk = window.algosdk;
+
+
+
+    let peraWallet = null;
+
+    let walletAddress = null;
+
+    let currentNetwork = null;
+
+    let currentAppId = null;
+
+    let currentMethod = null;
+
+    let currentArgs = [];
+
+    let unsignedTxnBase64 = null;
+
+
+
+    function getUrlParams() {
+
+      const params = new URLSearchParams(window.location.search);
+
+      return {
+
+        network: params.get('network') || 'testnet',
+
+        appId: params.get('appId'),
+
+        method: params.get('method'),
+
+        args: params.get('args'),
+
+        accounts: params.get('accounts'),
+
+        assets: params.get('assets'),
+
+        boxes: params.get('boxes')
+
+      };
+
+    }
+
+
+
+    function showError(msg) {
+
+      const el = document.getElementById('error-card');
+
+      document.getElementById('error-message').textContent = msg;
+
+      el.classList.remove('hidden');
+
+    }
+
+
+
+    function hideError() {
+
+      document.getElementById('error-card').classList.add('hidden');
+
+    }
+
+
+
+    function setWalletStatus(connected, text) {
+
+      const status = document.getElementById('wallet-status');
+
+      const dot = document.getElementById('wallet-dot');
+
+      const label = document.getElementById('wallet-text');
+
+      status.classList.remove('hidden');
+
+      dot.className = 'status-dot' + (connected ? ' connected' : '');
+
+      label.textContent = text;
+
+    }
+
+
+
+    function createInfoRow(labelText, valueText, color) {
+
+      const row = document.createElement('div');
+
+      row.className = 'info-row';
+
+      const label = document.createElement('span');
+
+      label.className = 'info-label';
+
+      label.textContent = labelText;
+
+      const value = document.createElement('span');
+
+      value.className = 'info-value';
+
+      value.textContent = valueText;
+
+      if (color) value.style.color = color;
+
+      row.appendChild(label);
+
+      row.appendChild(value);
+
+      return row;
+
+    }
+
+
+
+    async function init() {
+
+      const params = getUrlParams();
+
+      currentNetwork = params.network;
+
+      currentAppId = params.appId;
+
+      currentMethod = params.method;
+
+
+
+      if (!currentAppId || !currentMethod) {
+
+        showError('Missing required URL parameters: appId and method');
+
+        return;
+
+      }
+
+
+
+      try {
+
+        currentArgs = params.args ? JSON.parse(params.args) : [];
+
+      } catch (e) {
+
+        showError('Failed to parse args JSON: ' + e.message);
+
+        return;
+
+      }
+
+
+
+      document.getElementById('display-network').textContent = currentNetwork;
+
+      document.getElementById('display-appid').textContent = currentAppId;
+
+      document.getElementById('display-method').textContent = currentMethod;
+
+      document.getElementById('display-args').textContent = JSON.stringify(currentArgs);
+
+
+
+      peraWallet = new PeraWalletConnect({
+
+        chainId: NETWORK_CONFIG[currentNetwork].chainId
+
+      });
+
+
+
+      peraWallet.connector?.on('connect', () => {
+
+        document.getElementById('qr-card').classList.add('hidden');
+
+      });
+
+
+
+      peraWallet.connector?.on('disconnect', () => {
+
+        walletAddress = null;
+
+        setWalletStatus(false, 'Disconnected');
+
+        document.getElementById('execute-card').classList.add('hidden');
+
+      });
+
+    }
+
+
+
+    async function connectWallet() {
+
+      hideError();
+
+      try {
+
+        const accounts = await peraWallet.connect();
+
+        walletAddress = accounts[0];
+
+        setWalletStatus(true, 'Connected: ' + walletAddress);
+
+        document.getElementById('connect-btn').textContent = 'Wallet Connected';
+
+        document.getElementById('connect-btn').disabled = true;
+
+        document.getElementById('execute-card').classList.remove('hidden');
+
+      } catch (err) {
+
+        showError('Wallet connection failed: ' + (err.message || err));
+
+      }
+
+    }
+
+
+
+    document.getElementById('connect-btn').addEventListener('click', connectWallet);
+
+
+
+    async function buildAndSign() {
+
+      hideError();
+
+      document.getElementById('result-card').classList.add('hidden');
+
+
+
+      if (!walletAddress) {
+
+        showError('Wallet not connected');
+
+        return;
+
+      }
+
+
+
+      try {
+
+        const params = getUrlParams();
+
+        const body = {
+
+          network: currentNetwork,
+
+          appId: currentAppId,
+
+          sender: walletAddress,
+
+          method: currentMethod,
+
+          args: currentArgs,
+
+        };
+
+
+
+        if (params.accounts) {
+
+          body.accounts = params.accounts.split(',').map(s => s.trim()).filter(Boolean);
+
+        }
+
+        if (params.assets) {
+
+          body.assets = params.assets.split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n));
+
+        }
+
+        if (params.boxes) {
+
+          body.boxes = JSON.parse(params.boxes);
+
+        }
+
+
+
+        const buildRes = await fetch('/api/build-abi-call', {
+
+          method: 'POST',
+
+          headers: { 'Content-Type': 'application/json' },
+
+          body: JSON.stringify(body)
+
+        });
+
+
+
+        if (!buildRes.ok) {
+
+          const err = await buildRes.text();
+
+          throw new Error('Build failed: ' + err);
+
+        }
+
+
+
+        const buildData = await buildRes.json();
+
+        unsignedTxnBase64 = buildData.unsignedTxn;
+
+        const unsignedTxnBytes = Uint8Array.from(atob(buildData.unsignedTxn), c => c.charCodeAt(0));
+
+
+
+        const signedTxns = await peraWallet.signTransaction([[{
+
+          txn: algosdk.decodeUnsignedTransaction(unsignedTxnBytes),
+
+          signers: [walletAddress]
+
+        }]);
+
+
+
+        const signedTxnBase64 = btoa(String.fromCharCode(...new Uint8Array(signedTxns[0])));
+
+
+
+        const submitRes = await fetch('/api/submit-signed', {
+
+          method: 'POST',
+
+          headers: { 'Content-Type': 'application/json' },
+
+          body: JSON.stringify({ signedTxn: signedTxnBase64 })
+
+        });
+
+
+
+        const submitData = await submitRes.json();
+
+        if (!submitRes.ok || submitData.error) {
+
+          throw new Error(submitData.error || 'Submission failed');
+
+        }
+
+
+
+        const resultContainer = document.getElementById('result-container');
+
+        resultContainer.textContent = '';
+
+        resultContainer.appendChild(createInfoRow('Status:', 'Success', 'var(--success)'));
+
+        resultContainer.appendChild(createInfoRow('TXID:', submitData.txid, null));
+
+        resultContainer.appendChild(createInfoRow('Round:', String(submitData.confirmedRound), null));
+
+        if (submitData.appId) {
+
+          resultContainer.appendChild(createInfoRow('App ID:', String(submitData.appId), null));
+
+        }
+
+        document.getElementById('result-card').classList.remove('hidden');
+
+
+
+      } catch (err) {
+
+        showError(err.message || String(err));
+
+      }
+
+    }
+
+
+
+    document.getElementById('execute-btn').addEventListener('click', buildAndSign);
+
+
+
+    window.addEventListener('load', init);
+
+  </script>
+
+</body>
+
+</html>
+

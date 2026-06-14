@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FryGovernance Deployer</title>
+  <style>
+    :root {
+      --bg-primary: #1a1a2e;
+      --bg-secondary: #16213e;
+      --bg-card: #0f3460;
+      --accent: #e74c3c;
+      --accent-hover: #c0392b;
+      --text: #eee;
+      --text-muted: #888;
+      --success: #27ae60;
+      --warning: #f39c12;
+      --error: #e74c3c;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 2rem;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 0.5rem;
+      color: var(--accent);
+    }
+
+    .subtitle {
+      text-align: center;
+      color: var(--text-muted);
+      margin-bottom: 2rem;
+    }
+
+    .card {
+      background: var(--bg-secondary);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .card-title {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.75rem;
+    }
+
+    .address {
+      font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+      font-size: 0.875rem;
+      word-break: break-all;
+      background: var(--bg-primary);
+      padding: 0.75rem;
+      border-radius: 6px;
+    }
+
+    .address.connected {
+      border-left: 3px solid var(--success);
+    }
+
+    .address.expected {
+      border-left: 3px solid var(--text-muted);
+    }
+
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--text-muted);
+    }
+
+    .status-dot.connected {
+      background: var(--success);
+    }
+
+    .status-dot.error {
+      background: var(--error);
+    }
+
+    button {
+      background: var(--accent);
+      color: white;
+      border: none;
+      padding: 0.875rem 1.5rem;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      transition: background 0.2s;
+    }
+
+    button:hover:not(:disabled) {
+      background: var(--accent-hover);
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    button.secondary {
+      background: var(--bg-card);
+    }
+
+    button.secondary:hover:not(:disabled) {
+      background: #1a4a80;
+    }
+
+    .network-selector {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .network-option {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem;
+      background: var(--bg-primary);
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .network-option input {
+      accent-color: var(--accent);
+    }
+
+    .network-option label {
+      cursor: pointer;
+    }
+
+    .log-area {
+      background: var(--bg-primary);
+      border-radius: 6px;
+      padding: 1rem;
+      max-height: 200px;
+      overflow-y: auto;
+      font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+      font-size: 0.75rem;
+    }
+
+    .log-entry {
+      margin-bottom: 0.25rem;
+      line-height: 1.4;
+    }
+
+    .log-entry.info {
+      color: var(--text-muted);
+    }
+
+    .log-entry.success {
+      color: var(--success);
+    }
+
+    .log-entry.error {
+      color: var(--error);
+    }
+
+    .log-entry.warn {
+      color: var(--warning);
+    }
+
+    .result {
+      text-align: center;
+      padding: 2rem;
+    }
+
+    .result h2 {
+      color: var(--success);
+      margin-bottom: 1rem;
+    }
+
+    .app-id {
+      font-size: 2rem;
+      font-weight: bold;
+      color: var(--success);
+      margin-bottom: 1rem;
+    }
+
+    .result-details {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+    }
+
+    .error-box {
+      background: rgba(231, 76, 60, 0.1);
+      border: 1px solid var(--error);
+      border-radius: 6px;
+      padding: 1rem;
+      margin-top: 1rem;
+      color: var(--error);
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+
+    .button-group button {
+      flex: 1;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>FryGovernance Deployer</h1>
+    <p class="subtitle">Sign deployment transactions with Pera Wallet</p>
+
+    <!-- Expected Deployer -->
+    <div class="card">
+      <div class="card-title">Expected Deployer</div>
+      <div class="address expected" id="expected-address">Loading...</div>
+    </div>
+
+    <!-- Connection Status -->
+    <div class="card">
+      <div class="card-title">Wallet Connection</div>
+      <div id="connection-status">
+        <div class="status">
+          <div class="status-dot" id="status-dot"></div>
+          <span id="status-text">Not connected</span>
+        </div>
+        <div class="address connected hidden" id="connected-address"></div>
+      </div>
+      <div class="button-group">
+        <button id="connect-btn">Connect Pera Wallet</button>
+        <button id="disconnect-btn" class="secondary hidden">Disconnect</button>
+      </div>
+    </div>
+
+    <!-- Deploy Section -->
+    <div class="card hidden" id="deploy-section">
+      <div class="card-title">Deploy Contract</div>
+
+      <div class="network-selector">
+        <div class="network-option">
+          <input type="radio" name="network" id="net-testnet" value="testnet" checked>
+          <label for="net-testnet">Testnet</label>
+        </div>
+        <div class="network-option">
+          <input type="radio" name="network" id="net-mainnet" value="mainnet">
+          <label for="net-mainnet">Mainnet</label>
+        </div>
+      </div>
+
+      <button id="deploy-btn">Deploy FryGovernance</button>
+    </div>
+
+    <!-- Log Area -->
+    <div class="card">
+      <div class="card-title">Activity Log</div>
+      <div class="log-area" id="log-area">
+        <div class="log-entry info">Waiting for wallet connection...</div>
+      </div>
+    </div>
+
+    <!-- Error Display -->
+    <div class="error-box hidden" id="error-box"></div>
+
+    <!-- Success Result -->
+    <div class="card hidden" id="result-section">
+      <div class="result">
+        <h2>Deployment Successful!</h2>
+        <div class="app-id" id="result-app-id"></div>
+        <div class="result-details">
+          <div>Transaction: <span id="result-txid"></span></div>
+          <div>Confirmed Round: <span id="result-round"></span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Error handlers for debugging module load failures
+    window.addEventListener('error', function(e) {
+      console.error('[wc-signer] Uncaught error:', e.error || e.message);
+    });
+    window.addEventListener('unhandledrejection', function(e) {
+      console.error('[wc-signer] Unhandled rejection:', e.reason);
+    });
+  </script>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "algosdk": "https://esm.sh/algosdk@3.5.2"
+    }
+  }
+  </script>
+
+  <script type="module">
+    // Import from CDN - algosdk first, then perawallet with external flag
+    // to ensure both use the same algosdk instance
+    import algosdk from "https://esm.sh/algosdk@3.5.2";
+    import { PeraWalletConnect } from "https://esm.sh/@perawallet/connect@1.5.2?external=algosdk";
+
+    // Verify modules loaded
+    console.log("[wc-signer] Modules loaded:", { algosdk: !!algosdk, PeraWalletConnect: !!PeraWalletConnect });
+
+    // ==========================================================================
+    // State
+    // ==========================================================================
+
+    let config = null;
+    let peraWallet = null;
+    let connectedAddress = null;
+
+    // ==========================================================================
+    // DOM Elements
+    // ==========================================================================
+
+    const expectedAddressEl = document.getElementById("expected-address");
+    const statusDotEl = document.getElementById("status-dot");
+    const statusTextEl = document.getElementById("status-text");
+    const connectedAddressEl = document.getElementById("connected-address");
+    const connectBtn = document.getElementById("connect-btn");
+    const disconnectBtn = document.getElementById("disconnect-btn");
+    const deploySectionEl = document.getElementById("deploy-section");
+    const deployBtn = document.getElementById("deploy-btn");
+    const logAreaEl = document.getElementById("log-area");
+    const errorBoxEl = document.getElementById("error-box");
+    const resultSectionEl = document.getElementById("result-section");
+    const resultAppIdEl = document.getElementById("result-app-id");
+    const resultTxidEl = document.getElementById("result-txid");
+    const resultRoundEl = document.getElementById("result-round");
+
+    // ==========================================================================
+    // Logging
+    // ==========================================================================
+
+    function log(message, level = "info") {
+      const entry = document.createElement("div");
+      entry.className = `log-entry ${level}`;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      logAreaEl.appendChild(entry);
+      logAreaEl.scrollTop = logAreaEl.scrollHeight;
+    }
+
+    function showError(message) {
+      errorBoxEl.textContent = message;
+      errorBoxEl.classList.remove("hidden");
+      log(message, "error");
+    }
+
+    function hideError() {
+      errorBoxEl.classList.add("hidden");
+    }
+
+    // ==========================================================================
+    // Config
+    // ==========================================================================
+
+    async function fetchConfig() {
+      try {
+        const response = await fetch("/api/config");
+        if (!response.ok) throw new Error("Failed to fetch config");
+        config = await response.json();
+        expectedAddressEl.textContent = config.expectedDeployer;
+        log("Configuration loaded");
+      } catch (err) {
+        showError(`Failed to load config: ${err.message}`);
+      }
+    }
+
+    // ==========================================================================
+    // Wallet Connection
+    // ==========================================================================
+
+    function updateConnectionUI(connected, address = null) {
+      if (connected && address) {
+        statusDotEl.classList.add("connected");
+        statusTextEl.textContent = "Connected";
+        connectedAddressEl.textContent = address;
+        connectedAddressEl.classList.remove("hidden");
+        connectBtn.classList.add("hidden");
+        disconnectBtn.classList.remove("hidden");
+        deploySectionEl.classList.remove("hidden");
+      } else {
+        statusDotEl.classList.remove("connected");
+        statusTextEl.textContent = "Not connected";
+        connectedAddressEl.classList.add("hidden");
+        connectBtn.classList.remove("hidden");
+        disconnectBtn.classList.add("hidden");
+        deploySectionEl.classList.add("hidden");
+      }
+    }
+
+    async function connectWallet() {
+      hideError();
+      log("Connecting to Pera Wallet...");
+      connectBtn.disabled = true;
+
+      try {
+        if (!peraWallet) {
+          peraWallet = new PeraWalletConnect();
+        }
+
+        const accounts = await peraWallet.connect();
+
+        if (!accounts || accounts.length === 0) {
+          throw new Error("No accounts returned from wallet");
+        }
+
+        const address = accounts[0];
+        log(`Wallet connected: ${address.substring(0, 8)}...`);
+
+        // Verify address matches expected deployer
+        if (address !== config.expectedDeployer) {
+          await peraWallet.disconnect();
+          throw new Error(`Wrong wallet! Expected ${config.expectedDeployer.substring(0, 8)}... but got ${address.substring(0, 8)}...`);
+        }
+
+        connectedAddress = address;
+        updateConnectionUI(true, address);
+        log("Address verified - ready to deploy", "success");
+
+        // Set up disconnect handler
+        peraWallet.connector?.on("disconnect", () => {
+          log("Wallet disconnected");
+          connectedAddress = null;
+          updateConnectionUI(false);
+        });
+
+      } catch (err) {
+        showError(err.message);
+        updateConnectionUI(false);
+      } finally {
+        connectBtn.disabled = false;
+      }
+    }
+
+    async function disconnectWallet() {
+      if (peraWallet) {
+        await peraWallet.disconnect();
+      }
+      connectedAddress = null;
+      updateConnectionUI(false);
+      log("Disconnected from wallet");
+    }
+
+    async function tryReconnect() {
+      if (!peraWallet) {
+        peraWallet = new PeraWalletConnect();
+      }
+
+      try {
+        const accounts = await peraWallet.reconnectSession();
+        if (accounts && accounts.length > 0) {
+          const address = accounts[0];
+          if (address === config.expectedDeployer) {
+            connectedAddress = address;
+            updateConnectionUI(true, address);
+            log("Reconnected to previous session", "success");
+          }
+        }
+      } catch (err) {
+        // Silent reconnect failure is fine
+      }
+    }
+
+    // ==========================================================================
+    // Deployment
+    // ==========================================================================
+
+    function getSelectedNetwork() {
+      return document.querySelector('input[name="network"]:checked').value;
+    }
+
+    async function deployContract() {
+      hideError();
+      resultSectionEl.classList.add("hidden");
+      deployBtn.disabled = true;
+
+      const network = getSelectedNetwork();
+      log(`Starting deployment to ${network}...`);
+
+      try {
+        // Step 1: Compile TEAL
+        log("Compiling TEAL programs...");
+        const compileRes = await fetch("/api/compile-teal", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ network }),
+        });
+
+        if (!compileRes.ok) {
+          const err = await compileRes.json();
+          throw new Error(err.message || "Compilation failed");
+        }
+
+        const { approvalProgram, clearProgram, approvalSize, clearSize } = await compileRes.json();
+        log(`Compiled: approval=${approvalSize} bytes, clear=${clearSize} bytes`);
+
+        // Decode base64 to Uint8Array
+        const approvalBytes = Uint8Array.from(atob(approvalProgram), c => c.charCodeAt(0));
+        const clearBytes = Uint8Array.from(atob(clearProgram), c => c.charCodeAt(0));
+
+        // Step 2: Build transaction
+        log("Building transaction...");
+        const algodUrl = config.algodEndpoints[network];
+        const algodClient = new algosdk.Algodv2("", algodUrl, "");
+        const suggestedParams = await algodClient.getTransactionParams().do();
+
+        // Build app args: method selector + FRY ASA ID (big-endian uint64)
+        const methodSelector = new Uint8Array(config.methodSelector);
+        const fryAsaIdBytes = new Uint8Array(8);
+        const view = new DataView(fryAsaIdBytes.buffer);
+        view.setBigUint64(0, BigInt(config.fryAsaId), false); // big-endian
+
+        // Create ApplicationCreate transaction
+        const txn = algosdk.makeApplicationCreateTxnFromObject({
+          sender: connectedAddress,
+          suggestedParams,
+          approvalProgram: approvalBytes,
+          clearProgram: clearBytes,
+          numGlobalInts: config.stateSchema.numGlobalInts,
+          numGlobalByteSlices: config.stateSchema.numGlobalByteSlices,
+          numLocalInts: config.stateSchema.numLocalInts,
+          numLocalByteSlices: config.stateSchema.numLocalByteSlices,
+          appArgs: [methodSelector, fryAsaIdBytes],
+          onComplete: algosdk.OnApplicationComplete.NoOpOC,
+        });
+
+        log("Transaction built, requesting signature...", "warn");
+
+        // Step 3: Sign with Pera
+        // Pera SDK expects: SignerTransaction[][] format
+        // Each SignerTransaction has { txn: Transaction }
+        const signedTxns = await peraWallet.signTransaction([[{ txn }]]);
+
+        if (!signedTxns || signedTxns.length === 0) {
+          throw new Error("No signed transaction returned");
+        }
+
+        const signedTxnBytes = signedTxns[0];
+        log("Transaction signed!", "success");
+
+        // Step 4: Submit
+        log("Submitting to network...");
+        const signedTxnBase64 = btoa(String.fromCharCode(...signedTxnBytes));
+
+        const submitRes = await fetch("/api/submit-signed", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ network, signedTxn: signedTxnBase64 }),
+        });
+
+        if (!submitRes.ok) {
+          const err = await submitRes.json();
+          throw new Error(err.message || "Submission failed");
+        }
+
+        const result = await submitRes.json();
+
+        // Show success
+        log(`DEPLOYMENT SUCCESSFUL! App ID: ${result.appId}`, "success");
+        resultAppIdEl.textContent = `App ID: ${result.appId}`;
+        resultTxidEl.textContent = result.txId;
+        resultRoundEl.textContent = result.confirmedRound;
+        resultSectionEl.classList.remove("hidden");
+
+      } catch (err) {
+        if (err.message.includes("rejected") || err.message.includes("cancelled") || err.message.includes("closed")) {
+          showError("Transaction was rejected or cancelled by user");
+        } else {
+          showError(err.message);
+        }
+      } finally {
+        deployBtn.disabled = false;
+      }
+    }
+
+    // ==========================================================================
+    // Event Listeners
+    // ==========================================================================
+
+    connectBtn.addEventListener("click", connectWallet);
+    disconnectBtn.addEventListener("click", disconnectWallet);
+    deployBtn.addEventListener("click", deployContract);
+
+    // ==========================================================================
+    // Initialize
+    // ==========================================================================
+
+    async function init() {
+      await fetchConfig();
+      await tryReconnect();
+    }
+
+    try {
+      init().catch(err => {
+        console.error("[wc-signer] Async init error:", err);
+        document.body.innerHTML = `<div style="color:#e74c3c;padding:2rem;font-family:monospace;background:#1a1a2e;">
+          <h2>JS Initialization Failed</h2>
+          <pre>${err.stack || err.message || err}</pre>
+        </div>`;
+      });
+    } catch (err) {
+      console.error("[wc-signer] Sync init error:", err);
+      document.body.innerHTML = `<div style="color:#e74c3c;padding:2rem;font-family:monospace;background:#1a1a2e;">
+        <h2>JS Initialization Failed</h2>
+        <pre>${err.stack || err.message || err}</pre>
+      </div>`;
+    }
+  </script>
+</body>
+</html>

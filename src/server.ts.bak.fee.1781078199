@@ -1,0 +1,607 @@
+#!/usr/bin/env tsx
+/**
+ * FryGovernance Deployment Server
+ *
+ * Local Express server that serves a web page for deploying FryGovernance
+ * using Pera Wallet for transaction signing.
+ *
+ * Usage: npx tsx src/server.ts [--port 3333]
+ */
+
+import express, { Request, Response } from "express";
+import { program } from "commander";
+import algosdk from "algosdk";
+import { readFile } from "fs/promises";
+import { readFileSync } from "fs";
+import https from "https";
+import { createHash } from "crypto";
+import { join, dirname } from "path";
+import { fileURLToPath } from "url";
+
+// ESM __dirname equivalent
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// =============================================================================
+// Configuration
+// =============================================================================
+
+const EXPECTED_DEPLOYER = "E2F2LT2INE75DBOYHQXTCTOP2PAP5MHAXQRXTTCCXFKHQTVG36DJONBQZE";
+const FRY_ASA_ID = "2485314946"; // String for JSON safety with large numbers
+const METHOD_SELECTOR = [0x24, 0x0d, 0x2f, 0x67]; // create(uint64)void
+
+const STATE_SCHEMA = {
+  numGlobalInts: 5,
+  numGlobalByteSlices: 1,
+  numLocalInts: 0,
+  numLocalByteSlices: 0,
+};
+
+const ALGOD_ENDPOINTS: Record<string, string> = {
+  testnet: "https://testnet-api.4160.nodely.dev",
+  mainnet: "https://mainnet-api.4160.nodely.dev",
+};
+
+// Path to TEAL artifacts (relative to this file)
+const ARTIFACTS_DIR = join(__dirname, "..", "..", "..", "smart_contracts", "fry_governance", "artifacts");
+const ARC56_PATH = join(ARTIFACTS_DIR, "FryGovernance.arc56.json");
+
+// =============================================================================
+// Logging
+// =============================================================================
+
+function log(message: string, level: "info" | "error" | "success" | "warn" = "info"): void {
+  const timestamp = new Date().toISOString();
+  const colors: Record<string, string> = {
+    info: "\x1b[36m",    // Cyan
+    error: "\x1b[31m",   // Red
+    success: "\x1b[32m", // Green
+    warn: "\x1b[33m",    // Yellow
+  };
+  const reset = "\x1b[0m";
+  const prefix = { info: "INFO", error: "ERROR", success: "OK", warn: "WARN" };
+  console.log(`${colors[level]}[${timestamp}] [${prefix[level]}]${reset} ${message}`);
+}
+
+// =============================================================================
+// Algod Client
+// =============================================================================
+
+function getAlgodClient(network: string): algosdk.Algodv2 {
+  const endpoint = ALGOD_ENDPOINTS[network];
+  if (!endpoint) {
+    throw new Error(`Unknown network: ${network}`);
+  }
+  return new algosdk.Algodv2("", endpoint, "");
+}
+
+// =============================================================================
+// API Handlers
+// =============================================================================
+
+interface CompileRequest {
+  network: string;
+}
+
+interface SubmitRequest {
+  network: string;
+  signedTxn: string; // base64
+}
+
+async function handleConfig(_req: Request, res: Response): Promise<void> {
+  log("GET /api/config");
+  res.json({
+    expectedDeployer: EXPECTED_DEPLOYER,
+    fryAsaId: FRY_ASA_ID,
+    methodSelector: METHOD_SELECTOR,
+    stateSchema: STATE_SCHEMA,
+    algodEndpoints: ALGOD_ENDPOINTS,
+  });
+}
+
+async function handleAbi(_req: Request, res: Response): Promise<void> {
+  log("GET /api/abi");
+  try {
+    const arc56Spec = await readFile(ARC56_PATH, "utf-8");
+    res.type("application/json").send(arc56Spec);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    log(`Failed to read ARC56 spec: ${message}`, "error");
+    res.status(500).json({ error: true, message: `Failed to read ABI: ${message}` });
+  }
+}
+
+async function handleCompileTeal(req: Request, res: Response): Promise<void> {
+  const { network } = req.body as CompileRequest;
+  log(`POST /api/compile-teal (network: ${network})`);
+
+  // Validate network
+  if (network !== "testnet" && network !== "mainnet") {
+    res.status(400).json({ error: true, message: "Invalid network. Must be 'testnet' or 'mainnet'." });
+    return;
+  }
+
+  try {
+    // Read TEAL files
+    const approvalPath = join(ARTIFACTS_DIR, "FryGovernance.approval.teal");
+    const clearPath = join(ARTIFACTS_DIR, "FryGovernance.clear.teal");
+
+    log(`Reading TEAL from: ${ARTIFACTS_DIR}`);
+
+    const approvalTeal = await readFile(approvalPath, "utf-8");
+    const clearTeal = await readFile(clearPath, "utf-8");
+
+    log(`Approval TEAL: ${approvalTeal.length} bytes source`);
+    log(`Clear TEAL: ${clearTeal.length} bytes source`);
+
+    // Compile via algod
+    const client = getAlgodClient(network);
+
+    log("Compiling approval program...");
+    const approvalResult = await client.compile(approvalTeal).do();
+    const approvalProgram = approvalResult.result; // Already base64
+
+    log("Compiling clear program...");
+    const clearResult = await client.compile(clearTeal).do();
+    const clearProgram = clearResult.result; // Already base64
+
+    // Calculate compiled sizes
+    const approvalBytes = Buffer.from(approvalProgram, "base64");
+    const clearBytes = Buffer.from(clearProgram, "base64");
+
+    log(`Compiled approval: ${approvalBytes.length} bytes`);
+    log(`Compiled clear: ${clearBytes.length} bytes`);
+
+    res.json({
+      approvalProgram,
+      clearProgram,
+      approvalSize: approvalBytes.length,
+      clearSize: clearBytes.length,
+    });
+
+    log("TEAL compilation successful", "success");
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    log(`Compilation failed: ${message}`, "error");
+    res.status(500).json({ error: true, message: `Compilation failed: ${message}` });
+  }
+}
+
+async function handleSubmitSigned(req: Request, res: Response): Promise<void> {
+  const { network, signedTxn } = req.body as SubmitRequest;
+  log(`POST /api/submit-signed (network: ${network})`);
+
+  // Validate network
+  if (network !== "testnet" && network !== "mainnet") {
+    res.status(400).json({ error: true, message: "Invalid network. Must be 'testnet' or 'mainnet'." });
+    return;
+  }
+
+  if (!signedTxn) {
+    res.status(400).json({ error: true, message: "Missing signedTxn parameter." });
+    return;
+  }
+
+  try {
+    // Decode signed transaction
+    const signedTxnBytes = Buffer.from(signedTxn, "base64");
+    log(`Signed txn size: ${signedTxnBytes.length} bytes`);
+
+    // Submit to algod
+    const client = getAlgodClient(network);
+    log("Submitting transaction...");
+
+    const sendResult = await client.sendRawTransaction(signedTxnBytes).do();
+    const txId = sendResult.txid;
+    log(`Transaction submitted: ${txId}`);
+
+    // Wait for confirmation
+    log("Waiting for confirmation...");
+    const confirmedTxn = await algosdk.waitForConfirmation(client, txId, 10);
+
+    // Convert BigInt to Number for JSON serialization (algosdk v3.x returns BigInt)
+    const appId = Number(confirmedTxn.applicationIndex ?? 0);
+    const confirmedRound = Number(confirmedTxn.confirmedRound ?? 0);
+
+    log(`Transaction confirmed in round ${confirmedRound}`, "success");
+    log(`App ID: ${appId}`, "success");
+
+    res.json({
+      txId,
+      appId,
+      confirmedRound,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    log(`Submission failed: ${message}`, "error");
+    res.status(500).json({ error: true, message: `Submission failed: ${message}` });
+  }
+}
+
+// =============================================================================
+// Server Setup
+// =============================================================================
+
+function createServer(port: number): void {
+  const app = express();
+
+  // Fix BigInt serialization for all JSON responses (algosdk v3.x returns BigInt)
+  // This makes every res.json() call BigInt-safe globally
+  app.set('json replacer', (_key: string, value: unknown) =>
+    typeof value === 'bigint' ? Number(value) : value
+  );
+
+  // Middleware
+  app.use(express.json());
+
+  // Serve static files from public/
+  const publicDir = join(__dirname, "public");
+  app.use(express.static(publicDir));
+
+  // API routes
+  app.get("/api/config", (req, res) => {
+    handleConfig(req, res).catch((err) => {
+      log(`Error in /api/config: ${err}`, "error");
+      res.status(500).json({ error: true, message: String(err) });
+    });
+  });
+
+  app.get("/api/abi", (req, res) => {
+    handleAbi(req, res).catch((err) => {
+      log(`Error in /api/abi: ${err}`, "error");
+      res.status(500).json({ error: true, message: String(err) });
+    });
+  });
+
+  app.post("/api/compile-teal", (req, res) => {
+    handleCompileTeal(req, res).catch((err) => {
+      log(`Error in /api/compile-teal: ${err}`, "error");
+      res.status(500).json({ error: true, message: String(err) });
+    });
+  });
+
+  app.post("/api/submit-signed", (req, res) => {
+    handleSubmitSigned(req, res).catch((err) => {
+      log(`Error in /api/submit-signed: ${err}`, "error");
+      res.status(500).json({ error: true, message: String(err) });
+    });
+  });
+
+
+  // ==========================================================================
+  // ABI Method Call Endpoints
+  // ==========================================================================
+
+  app.get("/call", (_req, res) => {
+    res.sendFile(join(__dirname, "public", "call.html"));
+  });
+
+  interface BuildAbiCallRequest {
+    network: string;
+    appId: number;
+    sender: string;
+    method: string;
+    args: string[]; // base64-encoded arg bytes
+    accounts?: string[];
+    assets?: number[];
+    boxes?: { appId: number; name: string }[]; // name is base64
+  }
+
+  app.post("/api/build-abi-call", async (req, res) => {
+    const { network, appId, sender, method, args, accounts, assets, boxes } = req.body as BuildAbiCallRequest;
+    log(`POST /api/build-abi-call (network: ${network}, appId: ${appId}, method: ${method})`);
+
+    if (network !== "testnet" && network !== "mainnet") {
+      res.status(400).json({ error: true, message: "Invalid network. Must be 'testnet' or 'mainnet'." });
+      return;
+    }
+
+    if (!appId || !sender || !method) {
+      res.status(400).json({ error: true, message: "Missing appId, sender, or method." });
+      return;
+    }
+
+    try {
+      // Compute ABI selector: first 4 bytes of SHA-512/256
+      const selector = Buffer.from(createHash("sha512-256").update(method).digest().slice(0, 4));
+
+      // Decode args from base64
+      const appArgs: Buffer[] = [selector];
+      if (args && Array.isArray(args)) {
+        for (const arg of args) {
+          appArgs.push(Buffer.from(arg, "base64"));
+        }
+      }
+
+      const client = getAlgodClient(network);
+      const suggestedParams = await client.getTransactionParams().do();
+
+      const txn = algosdk.makeApplicationNoOpTxnFromObject({
+        sender,
+        suggestedParams,
+        appIndex: Number(appId),
+        appArgs,
+        accounts: accounts || undefined,
+        foreignAssets: assets || undefined,
+        boxes: boxes?.map((b) => ({ appId: b.appId, name: Buffer.from(b.name, "base64") })) || undefined,
+      });
+
+      const unsignedTxnBytes = algosdk.encodeUnsignedTransaction(txn);
+      res.json({
+        unsignedTxn: Buffer.from(unsignedTxnBytes).toString("base64"),
+        selector: Array.from(selector),
+      });
+
+      log("ABI call transaction built", "success");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      log(`Build ABI call failed: ${message}`, "error");
+      res.status(500).json({ error: true, message: `Build failed: ${message}` });
+    }
+  });
+
+  // ==========================================================================
+  // Genesis NFT API Endpoints
+  // ==========================================================================
+
+  const GENESIS_ARTIFACTS_DIR = join(process.env.HOME || "/home/fry", "wc-signer-genesis", "artifacts");
+
+  const GENESIS_CONFIG = {
+    admin: "E2F2LT2INE75DBOYHQXTCTOP2PAP5MHAXQRXTTCCXFKHQTVG36DJONBQZE",
+    treasury: "E2F2LT2INE75DBOYHQXTCTOP2PAP5MHAXQRXTTCCXFKHQTVG36DJONBQZE",
+    usdc_asa_id: 31566704,
+    fry_asa_id: 2485314946,
+    mint_price: 175000000,
+    max_supply: 1000,
+    royalty_bps: 500,
+    pool_bps: 1000,
+    total_supply: 1000,
+    base_uri: "https://fry.farm/genesis/metadata/"
+  };
+
+  app.get("/api/genesis/config", (_req, res) => {
+    log("GET /api/genesis/config");
+    res.json(GENESIS_CONFIG);
+  });
+
+  app.get("/api/genesis/teal/:contract/:type", async (req, res) => {
+    const { contract, type } = req.params;
+    log(`GET /api/genesis/teal/${contract}/${type}`);
+
+    const validContracts = ["GenesisNFT", "FeeRouter", "DistributionPool"];
+    const validTypes = ["approval", "clear"];
+
+    if (!validContracts.includes(contract) || !validTypes.includes(type)) {
+      res.status(400).json({ error: true, message: "Invalid contract or type" });
+      return;
+    }
+
+    try {
+      const tealPath = join(GENESIS_ARTIFACTS_DIR, `${contract}.${type}.teal`);
+      const tealSource = await readFile(tealPath, "utf-8");
+      res.type("text/plain").send(tealSource);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      log(`Failed to read TEAL: ${message}`, "error");
+      res.status(500).json({ error: true, message: `Failed to read TEAL: ${message}` });
+    }
+  });
+
+  app.get("/api/genesis/abi/:contract", async (req, res) => {
+    const { contract } = req.params;
+    log(`GET /api/genesis/abi/${contract}`);
+
+    const validContracts = ["GenesisNFT", "FeeRouter", "DistributionPool"];
+
+    if (!validContracts.includes(contract)) {
+      res.status(400).json({ error: true, message: "Invalid contract" });
+      return;
+    }
+
+    try {
+      const abiPath = join(GENESIS_ARTIFACTS_DIR, `${contract}.arc56.json`);
+      const abiSpec = await readFile(abiPath, "utf-8");
+      res.type("application/json").send(abiSpec);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      log(`Failed to read ABI: ${message}`, "error");
+      res.status(500).json({ error: true, message: `Failed to read ABI: ${message}` });
+    }
+  });
+
+  app.post("/api/genesis/compile-teal", async (req, res) => {
+    const { network, contract, type } = req.body as { network: string; contract: string; type: string };
+    log(`POST /api/genesis/compile-teal (network: ${network}, contract: ${contract}, type: ${type})`);
+
+    if (network !== "testnet" && network !== "mainnet") {
+      res.status(400).json({ error: true, message: "Invalid network" });
+      return;
+    }
+
+    const validContracts = ["GenesisNFT", "FeeRouter", "DistributionPool"];
+    const validTypes = ["approval", "clear"];
+
+    if (!validContracts.includes(contract) || !validTypes.includes(type)) {
+      res.status(400).json({ error: true, message: "Invalid contract or type" });
+      return;
+    }
+
+    try {
+      const tealPath = join(GENESIS_ARTIFACTS_DIR, `${contract}.${type}.teal`);
+      const tealSource = await readFile(tealPath, "utf-8");
+
+      const client = getAlgodClient(network);
+      const compileResult = await client.compile(tealSource).do();
+      const programBytes = Buffer.from(compileResult.result, "base64");
+
+      log(`Compiled ${contract}.${type}: ${programBytes.length} bytes`);
+
+      res.json({
+        result: compileResult.result,
+        size: programBytes.length,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      log(`Genesis compile failed: ${message}`, "error");
+      res.status(500).json({ error: true, message: `Compilation failed: ${message}` });
+    }
+  });
+
+  // ==========================================================================
+  // FryMarket API Endpoints
+  // ==========================================================================
+
+  const FRYMARKET_BASE = join(process.env.HOME || "/home/fry", "fry-market-contracts", "smart_contracts");
+
+  const FRYMARKET_CONFIG = {
+    admin: "E2F2LT2INE75DBOYHQXTCTOP2PAP5MHAXQRXTTCCXFKHQTVG36DJONBQZE",
+    fryId: 2485314946,
+    primaryFee: 300,
+    secondaryFee: 100,
+  };
+
+  const FRYMARKET_CONTRACTS: Record<string, { dir: string; name: string }> = {
+    fry_market: { dir: "fry_market", name: "FryMarket" },
+    fry_auction: { dir: "fry_auction", name: "FryAuction" },
+    fry_auction_bidding: { dir: "fry_auction_bidding", name: "FryAuctionBidding" },
+  };
+
+  app.get("/api/frymarket/config", (_req, res) => {
+    log("GET /api/frymarket/config");
+    res.json({
+      ...FRYMARKET_CONFIG,
+      algodEndpoints: ALGOD_ENDPOINTS,
+    });
+  });
+
+  app.get("/api/frymarket/teal/:contract/:type", async (req, res) => {
+    const { contract, type } = req.params;
+    log(`GET /api/frymarket/teal/${contract}/${type}`);
+
+    const contractInfo = FRYMARKET_CONTRACTS[contract];
+    const validTypes = ["approval", "clear"];
+
+    if (!contractInfo || !validTypes.includes(type)) {
+      res.status(400).json({ error: true, message: "Invalid contract or type" });
+      return;
+    }
+
+    try {
+      const tealPath = join(FRYMARKET_BASE, contractInfo.dir, `${contractInfo.name}.${type}.teal`);
+      const tealSource = await readFile(tealPath, "utf-8");
+      res.type("text/plain").send(tealSource);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      log(`Failed to read TEAL: ${message}`, "error");
+      res.status(500).json({ error: true, message: `Failed to read TEAL: ${message}` });
+    }
+  });
+
+  app.get("/api/frymarket/abi/:contract", async (req, res) => {
+    const { contract } = req.params;
+    log(`GET /api/frymarket/abi/${contract}`);
+
+    const contractInfo = FRYMARKET_CONTRACTS[contract];
+
+    if (!contractInfo) {
+      res.status(400).json({ error: true, message: "Invalid contract" });
+      return;
+    }
+
+    try {
+      const abiPath = join(FRYMARKET_BASE, contractInfo.dir, `${contractInfo.name}.arc56.json`);
+      const abiSpec = await readFile(abiPath, "utf-8");
+      res.type("application/json").send(abiSpec);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      log(`Failed to read ABI: ${message}`, "error");
+      res.status(500).json({ error: true, message: `Failed to read ABI: ${message}` });
+    }
+  });
+
+  app.post("/api/frymarket/compile-teal", async (req, res) => {
+    const { network, contract, type } = req.body as { network: string; contract: string; type: string };
+    log(`POST /api/frymarket/compile-teal (network: ${network}, contract: ${contract}, type: ${type})`);
+
+    if (network !== "testnet" && network !== "mainnet") {
+      res.status(400).json({ error: true, message: "Invalid network" });
+      return;
+    }
+
+    const contractInfo = FRYMARKET_CONTRACTS[contract];
+    const validTypes = ["approval", "clear"];
+
+    if (!contractInfo || !validTypes.includes(type)) {
+      res.status(400).json({ error: true, message: "Invalid contract or type" });
+      return;
+    }
+
+    try {
+      const tealPath = join(FRYMARKET_BASE, contractInfo.dir, `${contractInfo.name}.${type}.teal`);
+      const tealSource = await readFile(tealPath, "utf-8");
+
+      const client = getAlgodClient(network);
+      const compileResult = await client.compile(tealSource).do();
+      const programBytes = Buffer.from(compileResult.result, "base64");
+
+      log(`Compiled ${contractInfo.name}.${type}: ${programBytes.length} bytes`);
+
+      res.json({
+        result: compileResult.result,
+        size: programBytes.length,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      log(`FryMarket compile failed: ${message}`, "error");
+      res.status(500).json({ error: true, message: `Compilation failed: ${message}` });
+    }
+  });
+
+  // Load SSL certificates
+  const certDir = join(__dirname, "..", "certs");
+  const httpsOptions = {
+    key: readFileSync(join(certDir, "key.pem")),
+    cert: readFileSync(join(certDir, "cert.pem")),
+  };
+
+  // Bind to all interfaces (LAN accessible)
+  const HOST = "0.0.0.0";
+
+  // Create HTTPS server
+  const server = https.createServer(httpsOptions, app);
+  server.listen(port, HOST, () => {
+    console.log("");
+    console.log("=".repeat(60));
+    console.log("  FryGovernance Deployment Server (HTTPS)");
+    console.log("=".repeat(60));
+    console.log("");
+    console.log(`  URL:      https://192.168.1.169:${port}`);
+    console.log(`  Deployer: ${EXPECTED_DEPLOYER}`);
+    console.log(`  FRY ASA:  ${FRY_ASA_ID}`);
+    console.log("");
+    console.log("  NOTE: Browser will show security warning (self-signed cert)");
+    console.log("        Click 'Advanced' → 'Proceed' to continue");
+    console.log("");
+    console.log("=".repeat(60));
+    console.log("");
+  });
+}
+
+// =============================================================================
+// CLI
+// =============================================================================
+
+program
+  .name("wc-signer")
+  .description("Local server for signing Algorand transactions with Pera Wallet")
+  .option("-p, --port <number>", "Port to listen on", "3333")
+  .action((options) => {
+    const port = parseInt(options.port, 10);
+    if (isNaN(port) || port < 1 || port > 65535) {
+      console.error("Invalid port number");
+      process.exit(1);
+    }
+    createServer(port);
+  });
+
+program.parse();

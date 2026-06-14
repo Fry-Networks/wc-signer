@@ -1,0 +1,119 @@
+// Browser entry point - bundled by esbuild for client-side use
+// Buffer polyfill MUST be first - WalletConnect depends on it
+import { Buffer } from "buffer";
+(globalThis as any).Buffer = Buffer;
+(window as any).Buffer = Buffer;
+
+import SignClient from "@walletconnect/sign-client";
+import algosdk from "algosdk";
+import { sha512_256 } from "js-sha512";
+
+const PROJECT_ID = "cd5a7ddb217be62ef423a88bc826fc3c";
+
+const CHAIN_MAP: Record<number, string> = {
+  416001: "algorand:wGHE2Pwdvd7S12BL5FaOP20EGYesN73k",
+  416002: "algorand:SGO1GKSzyE7IEPItTxCByw9x8FmnrCDe",
+  4160:   "algorand:wGHE2Pwdvd7S12BL5FaOP20EGYesN73k",
+};
+
+class PeraWalletConnect {
+  chainId: number;
+  chainRef: string;
+  client: any;
+  session: any;
+  pendingUri: string | null;
+
+  constructor(opts: { chainId?: number } = {}) {
+    this.chainId = opts.chainId || 416001;
+    this.chainRef = CHAIN_MAP[this.chainId] || CHAIN_MAP[416001];
+    this.client = null;
+    this.session = null;
+    this.pendingUri = null;
+  }
+
+  async connect(): Promise<string[]> {
+    if (!this.client) {
+      this.client = await SignClient.init({
+        projectId: PROJECT_ID,
+        metadata: {
+          name: "FryGovernance Batch Signer",
+          description: "Sign governance transactions",
+          url: window.location.origin,
+          icons: [],
+        },
+      });
+    }
+
+    const { uri, approval } = await this.client.connect({
+      requiredNamespaces: {
+        algorand: {
+          chains: [this.chainRef],
+          methods: ["algo_signTxn"],
+          events: [],
+        },
+      },
+    });
+
+    if (uri) {
+      this.pendingUri = uri;
+      (window as any).__wcUri = uri;
+    }
+
+    this.session = await approval();
+    const accounts = this.session.namespaces.algorand?.accounts || [];
+    return accounts.map((a: string) => a.split(":")[2]);
+  }
+
+  async signTransaction(txns: any[][]): Promise<Uint8Array[]> {
+    if (!this.client || !this.session) {
+      throw new Error("WalletConnect session not established");
+    }
+
+    const params = txns.map((group) =>
+      group.map((item: any) => {
+        const unsignedBytes = algosdk.encodeUnsignedTransaction(item.txn);
+        return {
+          txn: Buffer.from(unsignedBytes).toString("base64"),
+          signers: item.signers,
+        };
+      })
+    );
+
+    const result = await this.client.request({
+      topic: this.session.topic,
+      chainId: this.chainRef,
+      request: {
+        id: 1,
+        jsonrpc: "2.0",
+        method: "algo_signTxn",
+        params,
+      },
+    });
+
+    return result.map((r: string | null) =>
+      r ? Buffer.from(r, "base64") : new Uint8Array(0)
+    );
+  }
+
+  disconnect(): void {
+    if (this.client && this.session) {
+      this.client
+        .disconnect({
+          topic: this.session.topic,
+          reason: { code: 6000, message: "User disconnected" },
+        })
+        .catch(() => {});
+    }
+  }
+}
+
+// Expose as globals for browser scripts
+(window as any).PeraWalletConnect = PeraWalletConnect;
+(window as any).algosdk = algosdk;
+(window as any).sha512_256 = sha512_256;
+
+// Debug logging for verification
+console.log("[bundle] PeraWalletConnect type:", typeof PeraWalletConnect);
+console.log("[bundle] algosdk type:", typeof algosdk);
+console.log("[bundle] sha512_256 type:", typeof sha512_256);
+

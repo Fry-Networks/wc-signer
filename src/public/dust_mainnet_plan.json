@@ -1,0 +1,90 @@
+{
+  "appId": 3597899611,
+  "sender": "7CTUPB7WJQYZBLPYIRQMRVOS2QOAB3R7RJBYTX5VGHV6QL4D7GCVCNCC7U",
+  "network": "mainnet",
+  "groups": [
+    {
+      "description": "ALGO funding",
+      "txns": [
+        {
+          "type": "pay",
+          "to": "XRIH5CQZ25RHAZPIRQ3MTWWLFNI2GNVNGYD2N4HG4PLDCW2DL5UGLZSN6U",
+          "amount": 200000,
+          "note": "MBR funding"
+        }
+      ]
+    },
+    {
+      "description": "create_vote synthetic",
+      "txns": [
+        {
+          "type": "pay",
+          "to": "XRIH5CQZ25RHAZPIRQ3MTWWLFNI2GNVNGYD2N4HG4PLDCW2DL5UGLZSN6U",
+          "amount": 61700,
+          "note": "vote MBR"
+        },
+        {
+          "type": "appl",
+          "method": "create_vote",
+          "args": [
+            "hex:1111111111111111111111111111111111111111111111111111111111111111",
+            4,
+            2000000000,
+            604800,
+            1,
+            1
+          ],
+          "boxes": [
+            "hex:761111111111111111111111111111111111111111111111111111111111111111"
+          ]
+        }
+      ]
+    },
+    {
+      "description": "FRY funding",
+      "txns": [
+        {
+          "type": "axfer",
+          "assetId": 3597899516,
+          "to": "XRIH5CQZ25RHAZPIRQ3MTWWLFNI2GNVNGYD2N4HG4PLDCW2DL5UGLZSN6U",
+          "amount": 3000
+        }
+      ]
+    },
+    {
+      "description": "admin_import_stake batch (2 stakes)",
+      "txns": [
+        {
+          "type": "appl",
+          "method": "admin_import_stake",
+          "args": [
+            "hex:1111111111111111111111111111111111111111111111111111111111111111",
+            "PI7DUOR2HI5DUOR2HI5DUOR2HI5DUOR2HI5DUOR2HI5DUOR2HI5HPKHTNA",
+            0,
+            1000,
+            1718112000
+          ],
+          "boxes": [
+            "hex:761111111111111111111111111111111111111111111111111111111111111111",
+            "hex:7341d9891edbdd15e3eab7f7fb06fdf1e147592f990df84693f4a624500fc34edd"
+          ]
+        },
+        {
+          "type": "appl",
+          "method": "admin_import_stake",
+          "args": [
+            "hex:1111111111111111111111111111111111111111111111111111111111111111",
+            "PM7DWOZ3HM5TWOZ3HM5TWOZ3HM5TWOZ3HM5TWOZ3HM5TWOZ3HM54VC6XSY",
+            1,
+            2000,
+            1718198400
+          ],
+          "boxes": [
+            "hex:761111111111111111111111111111111111111111111111111111111111111111",
+            "hex:736c0921408b03816a613ee62c0ff73644909e45d9c340ff79b605decd0cda2eef"
+          ]
+        }
+      ]
+    }
+  ]
+}

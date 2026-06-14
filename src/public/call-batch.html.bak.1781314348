@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FryGovernance V2 Batch Signer</title>
+  <style>
+    :root {
+      --bg-primary: #1a1a2e;
+      --bg-secondary: #16213e;
+      --bg-card: #0f3460;
+      --accent: #e74c3c;
+      --accent-hover: #c0392b;
+      --text: #eee;
+      --text-muted: #888;
+      --success: #27ae60;
+      --warning: #f39c12;
+      --error: #e74c3c;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: var(--bg-primary); color: var(--text); min-height: 100vh; padding: 2rem;
+    }
+    .container { max-width: 900px; margin: 0 auto; }
+    h1 { text-align: center; margin-bottom: 0.5rem; color: var(--accent); }
+    .subtitle { text-align: center; color: var(--text-muted); margin-bottom: 2rem; }
+    .card {
+      background: var(--bg-secondary); border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem;
+    }
+    .card-title {
+      font-size: 0.875rem; color: var(--text-muted); text-transform: uppercase;
+      letter-spacing: 0.05em; margin-bottom: 0.75rem;
+    }
+    label { display: block; margin-bottom: 0.5rem; color: var(--text-muted); font-size: 0.875rem; }
+    input, select, textarea {
+      width: 100%; padding: 0.75rem; border: 1px solid var(--bg-card); border-radius: 6px;
+      background: var(--bg-primary); color: var(--text); font-family: inherit; font-size: 0.9rem;
+    }
+    textarea { min-height: 120px; resize: vertical; font-family: 'SF Mono', Monaco, 'Courier New', monospace; }
+    button {
+      width: 100%; padding: 1rem; border: none; border-radius: 8px; background: var(--accent);
+      color: white; font-size: 1rem; font-weight: 600; cursor: pointer; transition: background 0.2s;
+    }
+    button:hover { background: var(--accent-hover); }
+    button:disabled { background: var(--bg-card); cursor: not-allowed; }
+    .hidden { display: none !important; }
+    .status { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem; }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted); }
+    .status-dot.connected { background: var(--success); }
+    .status-dot.error { background: var(--error); }
+    .result-value {
+      font-family: 'SF Mono', Monaco, 'Courier New', monospace; font-size: 0.85rem;
+      word-break: break-all; background: var(--bg-primary); padding: 0.75rem;
+      border-radius: 6px; margin-top: 0.5rem; white-space: pre-wrap;
+    }
+    .error-message { color: var(--error); margin-top: 0.5rem; font-size: 0.9rem; }
+    table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; }
+    th, td { text-align: left; padding: 0.5rem; border-bottom: 1px solid var(--bg-card); font-size: 0.9rem; }
+    th { color: var(--text-muted); text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.05em; }
+    td { font-family: 'SF Mono', Monaco, 'Courier New', monospace; }
+    .badge {
+      display: inline-block; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem;
+      font-weight: 600; text-transform: uppercase;
+    }
+    .badge-pending { background: var(--warning); color: #1a1a2e; }
+    .badge-signed { background: #3498db; color: white; }
+    .badge-submitted { background: #9b59b6; color: white; }
+    .badge-confirmed { background: var(--success); color: white; }
+    .badge-error { background: var(--error); color: white; }
+    .log-line { font-family: monospace; font-size: 0.85rem; padding: 0.25rem 0; border-bottom: 1px solid #1a1a2e; }
+    .log-time { color: var(--text-muted); margin-right: 0.5rem; }
+    a { color: #3498db; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>FryGovernance V2 Batch Signer</h1>
+    <p class="subtitle">Sign and submit atomic transaction groups via Pera Wallet</p>
+
+    <div class="card" id="plan-card">
+      <div class="card-title">Execution Plan</div>
+      <label>Paste plan JSON (or load from <code>?src=URL</code> or <code>?plan=BASE64JSON</code>)</label>
+      <textarea id="plan-input" placeholder='{ "appId": 3594179146, "sender": "...", "groups": [...] }'></textarea>
+      <button id="load-btn">Load Plan</button>
+      <div id="plan-error" class="error-message hidden"></div>
+    </div>
+
+    <div class="card hidden" id="verify-card">
+      <div class="card-title">Verification Gates</div>
+      <div id="verify-panel"></div>
+    </div>
+
+    <div class="card hidden" id="summary-card">
+      <div class="card-title">Plan Summary</div>
+      <div class="info-row"><span class="info-label">App ID:</span> <span class="info-value" id="summary-appid">-</span></div>
+      <div class="info-row"><span class="info-label">Sender:</span> <span class="info-value" id="summary-sender">-</span></div>
+      <div class="info-row"><span class="info-label">Groups:</span> <span class="info-value" id="summary-groups">-</span></div>
+    </div>
+
+    <div class="card hidden" id="groups-card">
+      <div class="card-title">Groups</div>
+      <table>
+        <thead><tr><th>#</th><th>Description</th><th>Txns</th><th>Status</th></tr></thead>
+        <tbody id="groups-body"></tbody>
+      </table>
+    </div>
+
+    <div class="card" id="wallet-card">
+      <div class="card-title">Wallet Connection</div>
+      <button id="connect-btn">Connect Pera Wallet</button>
+      <div class="status hidden" id="wallet-status">
+        <div class="status-dot" id="wallet-dot"></div>
+        <span id="wallet-text">Not connected</span>
+      </div>
+    </div>
+
+    <div class="card hidden" id="wc-uri-card">
+      <div class="card-title">WalletConnect URI</div>
+      <input id="wc-uri-input" readonly style="width:100%;padding:0.75rem;background:var(--bg-primary);color:var(--text);border:1px solid var(--bg-card);border-radius:6px;font-family:monospace;font-size:0.85rem;" value="">
+    </div>
+
+    <div class="card hidden" id="execute-card">
+      <button id="execute-btn" disabled>Sign &amp; Submit All Groups</button>
+    </div>
+
+    <div class="card hidden" id="log-card">
+      <div class="card-title">Execution Log</div>
+      <div id="log-container"></div>
+    </div>
+
+    <div class="card hidden" id="results-card">
+      <div class="card-title">Results</div>
+      <div id="results-container"></div>
+    </div>
+  </div>
+
+  <script src="/bundle.js"></script>
+  <script>
+    const algosdk = window.algosdk;
+    const PeraWalletConnect = window.PeraWalletConnect;
+
+    let plan = null;
+    let abiMethods = new Map();
+    let suggestedParams = null;
+    let peraWallet = null;
+    let sender = null;
+
+    function log(msg) {
+      const el = document.getElementById('log-container');
+      const line = document.createElement('div');
+      line.className = 'log-line';
+      const t = document.createElement('span');
+      t.className = 'log-time';
+      t.textContent = new Date().toLocaleTimeString() + ' ';
+      const s = document.createElement('span');
+      s.textContent = msg;
+      line.appendChild(t);
+      line.appendChild(s);
+      el.appendChild(line);
+      console.log('[' + new Date().toLocaleTimeString() + ']', msg);
+    }
+
+    function showError(id, msg) {
+      const el = document.getElementById(id);
+      el.textContent = msg;
+      el.classList.remove('hidden');
+    }
+    function hideError(id) { document.getElementById(id).classList.add('hidden'); }
+
+    function setWalletStatus(connected, text) {
+      const status = document.getElementById('wallet-status');
+      const dot = document.getElementById('wallet-dot');
+      const label = document.getElementById('wallet-text');
+      status.classList.remove('hidden');
+      dot.className = 'status-dot' + (connected ? ' connected' : '');
+      label.textContent = text;
+    }
+
+    function getNetwork() {
+      return (plan && plan.network) || 'mainnet';
+    }
+
+    function snakeToCamel(obj) {
+      const result = {};
+      for (const key in obj) {
+        if (Object.prototype.hasOwnProperty.call(obj, key)) {
+          const camel = key.replace(/-([a-z])/g, function(m, l) { return l.toUpperCase(); });
+          result[camel] = obj[key];
+        }
+      }
+      return result;
+    }
+
+    async function getSuggestedParams() {
+      const net = getNetwork();
+      const urls = net === 'testnet'
+        ? ['https://testnet-api.algonode.cloud/v2/transactions/params', 'https://testnet-api.4160.nodely.dev/v2/transactions/params']
+        : ['/api/algod/v2/transactions/params', 'https://mainnet-api.algonode.cloud/v2/transactions/params'];
+      for (const url of urls) {
+        try {
+          const res = await fetch(url);
+          if (!res.ok) continue;
+          const raw = await res.json();
+          const lastRound = raw['last-round'];
+          const firstRound = raw['first-round'] != null ? raw['first-round'] : lastRound - 1000;
+          const sp = {
+            firstRound: firstRound,
+            lastRound: lastRound,
+            genesisHash: new Uint8Array(atob(raw['genesis-hash']).split('').map(function(c) { return c.charCodeAt(0); })),
+            genesisID: raw['genesis-id'],
+            fee: 1000,
+            flatFee: true,
+            minFee: raw['min-fee'] != null ? raw['min-fee'] : 1000,
+            consensusVersion: raw['consensus-version']
+          };
+          return sp;
+        } catch (e) { console.warn('sp fetch failed', url, e); }
+      }
+      throw new Error('Cannot fetch suggested params from any endpoint');
+    }
+
+    async function fetchAbi() {
+      const res = await fetch('/api/abi');
+      if (!res.ok) throw new Error('Failed to fetch ABI from /api/abi');
+      const arc56 = await res.json();
+      const map = new Map();
+      for (const m of arc56.methods || []) {
+        const sig = m.name;
+        if (sig) {
+          map.set(sig, m);
+          const short = sig.split('(')[0];
+          if (!map.has(short)) map.set(short, m);
+        }
+      }
+      return map;
+    }
+
+    function deriveSelector(methodSig) {
+      const hash = window.sha512_256(methodSig);
+      let hex;
+      if (typeof hash === 'string') hex = hash;
+      else if (hash instanceof Uint8Array) hex = Array.from(hash).map(function(b) { return b.toString(16).padStart(2, '0'); }).join('');
+      else hex = hash.toString('hex');
+      const selectorHex = hex.slice(0, 8);
+      const bytes = new Uint8Array(4);
+      for (let i = 0; i < 4; i++) bytes[i] = parseInt(selectorHex.substr(i * 2, 2), 16);
+      return bytes;
+    }
+
+    function encodeUint8(v) { return new Uint8Array([Number(v) & 0xff]); }
+    function encodeUint64(v) { return algosdk.encodeUint64(BigInt(v)); }
+
+    function hexToBytes(hex) {
+      if (hex.startsWith('hex:')) hex = hex.slice(4);
+      hex = hex.replace(/^0x/, '');
+      if (hex.length % 2 !== 0) throw new Error('Invalid hex length');
+      const bytes = new Uint8Array(hex.length / 2);
+      for (let i = 0; i < hex.length; i += 2) bytes[i / 2] = parseInt(hex.substr(i, 2), 16);
+      return bytes;
+    }
+
+    function encodeAbiArg(value, type, groupTxns, txnIndex) {
+      if (type === 'uint8') return encodeUint8(value);
+      if (type === 'uint16') {
+        const v = Number(value);
+        return new Uint8Array([(v >> 8) & 0xff, v & 0xff]);
+      }
+      if (type === 'uint32') {
+        const v = Number(value);
+        return new Uint8Array([(v >> 24) & 0xff, (v >> 16) & 0xff, (v >> 8) & 0xff, v & 0xff]);
+      }
+      if (type === 'uint64') return encodeUint64(value);
+      if (type.startsWith('byte[') || type === 'byte') {
+        if (typeof value === 'string' && value.startsWith('hex:')) return hexToBytes(value);
+        if (typeof value === 'string') {
+          try {
+            const bin = atob(value);
+            const bytes = new Uint8Array(bin.length);
+            for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+            return bytes;
+          } catch (e) {
+            return new TextEncoder().encode(value);
+          }
+        }
+        if (value instanceof Uint8Array) return value;
+        throw new Error('Unsupported bytes value');
+      }
+      if (type === 'address') {
+        const addr = (typeof value === 'string' && value.startsWith('addr:')) ? value.slice(5) : value;
+        return algosdk.decodeAddress(addr).publicKey;
+      }
+      if (['pay', 'axfer', 'appl', 'acfg', 'afrz'].indexOf(type) >= 0) {
+        let refIndex = -1;
+        for (let k = 0; k < groupTxns.length; k++) {
+          if (k < txnIndex && groupTxns[k].type === type) { refIndex = k; break; }
+        }
+        if (refIndex === -1) throw new Error('No ' + type + ' txn found in group before app call at index ' + txnIndex);
+        return encodeUint8(refIndex);
+      }
+      if (type === 'bool') return encodeUint8(value ? 1 : 0);
+      throw new Error('Unsupported ABI type: ' + type);
+    }
+
+    function buildAppArgs(methodName, planArgs, groupTxns, txnIndex, abiMethod) {
+      const sig = abiMethod.name;
+      const selectorBytes = deriveSelector(sig);
+      const match = sig.match(/\((.*)\)/);
+      if (!match) throw new Error('Bad method signature: ' + sig);
+      const typeList = match[1].split(',').filter(function(t) { return t.trim(); });
+      const encodedArgs = [];
+      let argIdx = 0;
+      for (let i = 0; i < typeList.length; i++) {
+        const t = typeList[i].trim();
+        if (['pay', 'axfer', 'appl', 'acfg', 'afrz'].indexOf(t) >= 0) {
+          encodedArgs.push(encodeAbiArg(null, t, groupTxns, txnIndex));
+        } else {
+          if (argIdx >= (planArgs || []).length) throw new Error('Missing arg ' + argIdx + ' for ' + sig);
+          encodedArgs.push(encodeAbiArg(planArgs[argIdx], t, groupTxns, txnIndex));
+          argIdx++;
+        }
+      }
+      return [selectorBytes].concat(encodedArgs);
+    }
+
+    function buildNonApplTxn(planTxn, sp, sender) {
+      console.log('buildNonApplTxn type=' + planTxn.type + ' sender=' + sender + ' to=' + planTxn.to + ' amount=' + planTxn.amount + ' note=' + planTxn.note);
+      console.log('sp keys=' + Object.keys(sp).join(','));
+      if (planTxn.type === 'pay') {
+        return algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+          sender: sender,
+          receiver: planTxn.to,
+          amount: BigInt(planTxn.amount),
+          note: planTxn.note ? new TextEncoder().encode(planTxn.note) : undefined,
+          suggestedParams: sp
+        });
+      }
+      if (planTxn.type === 'axfer') {
+        return algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({
+          sender: sender,
+          receiver: planTxn.to,
+          assetIndex: Number(planTxn.assetId),
+          amount: BigInt(planTxn.amount),
+          suggestedParams: sp
+        });
+      }
+      throw new Error('Unknown txn type: ' + planTxn.type);
+    }
+
+    function buildGroup(group, sp, appId, sender) {
+      const raw = group.txns.map(function(pt, i) {
+        if (pt.type === 'appl') {
+          const abiMethod = abiMethods.get(pt.method);
+          if (!abiMethod) throw new Error('Unknown method: ' + pt.method);
+          return { __isAppl: true, planTxn: pt, abiMethod: abiMethod, sender: sender, appId: appId, sp: sp, index: i };
+        }
+        return buildNonApplTxn(pt, sp, sender);
+      });
+      const txns = raw.map(function(item, i) {
+        if (item.__isAppl) {
+          const appArgs = buildAppArgs(item.planTxn.method, item.planTxn.args, group.txns, i, item.abiMethod);
+          const boxes = (item.planTxn.boxes || []).map(function(b) {
+            let name;
+            if (typeof b === 'string' && b.startsWith('hex:')) name = hexToBytes(b);
+            else if (typeof b === 'string') name = new TextEncoder().encode(b);
+            else if (b && typeof b.name === 'string' && b.name.startsWith('hex:')) name = hexToBytes(b.name);
+            else if (b && b.name instanceof Uint8Array) name = b.name;
+            else if (b && typeof b.name === 'string') name = new TextEncoder().encode(b.name);
+            else throw new Error('Bad box name');
+            const appIndex = (b && b.appIndex != null) ? Number(b.appIndex) : Number(appId);
+            return { appIndex: appIndex, name: name };
+          });
+          return algosdk.makeApplicationNoOpTxnFromObject({
+            sender: item.sender,
+            appIndex: Number(item.appId),
+            appArgs: appArgs,
+            suggestedParams: item.sp,
+            boxes: boxes
+          });
+        }
+        return item;
+      });
+      algosdk.assignGroupID(txns);
+      return txns;
+    }
+
+    async function signAndSubmitGroup(txns, sender, peraWallet) {
+      const txnsToSign = txns.map(function(txn) { return { txn: txn, signers: [sender] }; });
+      const signedGroups = await peraWallet.signTransaction([txnsToSign]);
+      let signedTxns;
+      if (Array.isArray(signedGroups) && signedGroups.length > 0 && Array.isArray(signedGroups[0])) {
+        signedTxns = signedGroups[0];
+      } else if (Array.isArray(signedGroups)) {
+        signedTxns = signedGroups;
+      } else {
+        throw new Error('Unexpected sign result shape');
+      }
+      const totalLength = signedTxns.reduce(function(sum, b) { return sum + b.length; }, 0);
+      const combined = new Uint8Array(totalLength);
+      let offset = 0;
+      for (let i = 0; i < signedTxns.length; i++) {
+        combined.set(signedTxns[i], offset);
+        offset += signedTxns[i].length;
+      }
+      const net = getNetwork();
+      const submitUrl = net === 'testnet' ? 'https://testnet-api.algonode.cloud/v2/transactions' : '/api/algod/v2/transactions';
+      const res = await fetch(submitUrl, {
+        method: 'POST',
+        body: combined,
+        headers: { 'Content-Type': 'application/x-binary' }
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error('Submission failed: ' + res.status + ' ' + text);
+      }
+      const data = await res.json();
+      return { txId: data.txId || data.txid || data.transactionId };
+    }
+
+    async function waitForConfirmation(txids, timeoutMs, intervalMs) {
+      const start = Date.now();
+      while (Date.now() - start < timeoutMs) {
+        let allConfirmed = true;
+        const results = [];
+        for (let i = 0; i < txids.length; i++) {
+          try {
+            const pendingNet = getNetwork();
+            const pendingBase = pendingNet === 'testnet' ? 'https://testnet-api.algonode.cloud/v2/transactions/pending/' : '/api/algod/v2/transactions/pending/';
+            const res = await fetch(pendingBase + txids[i] + '?format=json');
+            const data = await res.json();
+            if (data['confirmed-round']) {
+              results.push({ txid: txids[i], confirmedRound: data['confirmed-round'], poolError: data['pool-error'] });
+            } else {
+              allConfirmed = false;
+            }
+          } catch (e) {
+            allConfirmed = false;
+          }
+        }
+        if (allConfirmed) return results;
+        await new Promise(function(r) { setTimeout(r, intervalMs); });
+      }
+      throw new Error('Confirmation timeout after ' + (timeoutMs / 1000) + 's for txids: ' + txids.join(', '));
+    }
+
+    let verificationPassed = false;
+
+    async function sha256Bytes(data) {
+      const hash = await crypto.subtle.digest('SHA-256', data);
+      return new Uint8Array(hash);
+    }
+
+    function verifyAddresses(plan) {
+      const allAddrs = new Set();
+      allAddrs.add(plan.sender);
+      for (const g of plan.groups) {
+        for (const t of g.txns) {
+          if (t.to) allAddrs.add(t.to);
+          for (const a of (t.args || [])) {
+            if (typeof a === 'string' && a.length === 58 && !a.startsWith('hex:')) allAddrs.add(a);
+          }
+        }
+      }
+      const failures = [];
+      for (const addr of allAddrs) {
+        try { algosdk.decodeAddress(addr); }
+        catch (e) { failures.push(addr); }
+      }
+      return { label: 'Address decode check', passed: failures.length === 0, detail: failures.length ? 'Failed: ' + failures.join(', ') : 'All ' + allAddrs.size + ' addresses valid' };
+    }
+
+    function verifyFryAmounts(plan) {
+      let importSum = 0;
+      let axferAmount = null;
+      for (const g of plan.groups) {
+        for (const t of g.txns) {
+          if (t.type === 'appl' && t.method === 'admin_import_stake') {
+            importSum += Number(t.args[3] || 0);
+          }
+          if (t.type === 'axfer') {
+            axferAmount = Number(t.amount);
+          }
+        }
+      }
+      if (axferAmount == null) return { label: 'FRY amount consistency', passed: false, detail: 'No FRY axfer found in plan' };
+      const pass = importSum === axferAmount;
+      return { label: 'FRY amount consistency', passed: pass, detail: 'Import sum=' + importSum + '  Axfer amount=' + axferAmount + (pass ? ' MATCH' : ' MISMATCH') };
+    }
+
+    async function verifyStakeBoxKeys(plan) {
+      const rows = [];
+      let allPass = true;
+      for (const g of plan.groups) {
+        for (const t of g.txns) {
+          if (t.type === 'appl' && t.method === 'admin_import_stake') {
+            const voteIdHex = (t.args[0] || '').replace(/^hex:/, '');
+            const voterAddr = t.args[1];
+            const expectedStakeKey = (t.boxes || [])[1];
+            if (!voteIdHex || !voterAddr || !expectedStakeKey) { allPass = false; rows.push({ voteId: voteIdHex, passed: false, detail: 'Missing args/boxes' }); continue; }
+            try {
+              const voteBytes = hexToBytes('hex:' + voteIdHex);
+              const voterPk = algosdk.decodeAddress(voterAddr).publicKey;
+              const combined = new Uint8Array(voteBytes.length + voterPk.length);
+              combined.set(voteBytes, 0);
+              combined.set(voterPk, voteBytes.length);
+              const hash = await sha256Bytes(combined);
+              const recomputed = 'hex:73' + Array.from(hash).map(function(b) { return b.toString(16).padStart(2, '0'); }).join('');
+              const pass = recomputed.toLowerCase() === expectedStakeKey.toLowerCase();
+              if (!pass) allPass = false;
+              rows.push({ voteId: voteIdHex.slice(0,16)+'...', voter: voterAddr.slice(0,10)+'...', passed: pass, detail: pass ? 'MATCH' : 'RECOMPUTED ' + recomputed + ' != PLAN ' + expectedStakeKey });
+            } catch (e) {
+              allPass = false;
+              rows.push({ voteId: voteIdHex.slice(0,16)+'...', voter: voterAddr.slice(0,10)+'...', passed: false, detail: 'Error: ' + e.message });
+            }
+          }
+        }
+      }
+      if (rows.length === 0) return { label: 'Stake box key check', passed: true, detail: 'No import stakes in plan' };
+      const failCount = rows.filter(function(r) { return !r.passed; }).length;
+      return { label: 'Stake box key check', passed: allPass, detail: rows.length + ' imports — ' + (rows.length - failCount) + ' PASS, ' + failCount + ' FAIL' };
+    }
+
+    async function verifyVoteBoxKeys(plan) {
+      let allPass = true;
+      let count = 0;
+      for (const g of plan.groups) {
+        for (const t of g.txns) {
+          if (t.type === 'appl' && (t.method === 'create_vote' || t.method === 'admin_import_stake')) {
+            const voteIdHex = (t.args[0] || '').replace(/^hex:/, '');
+            const expectedVoteKey = (t.boxes || [])[0];
+            if (!voteIdHex || !expectedVoteKey) continue;
+            count++;
+            const recomputed = 'hex:76' + voteIdHex;
+            const pass = recomputed.toLowerCase() === expectedVoteKey.toLowerCase();
+            if (!pass) allPass = false;
+          }
+        }
+      }
+      return { label: 'Vote box key check', passed: allPass, detail: count + ' vote box references checked' };
+    }
+
+    async function runVerification(plan) {
+      const panel = document.getElementById('verify-panel');
+      while (panel.firstChild) panel.removeChild(panel.firstChild);
+      const results = [verifyAddresses(plan), verifyFryAmounts(plan), await verifyStakeBoxKeys(plan), await verifyVoteBoxKeys(plan)];
+      let allPass = true;
+      for (const r of results) {
+        if (!r.passed) allPass = false;
+        const row = document.createElement('div');
+        row.style.marginBottom = '0.5rem';
+        const badge = document.createElement('span');
+        badge.className = 'badge ' + (r.passed ? 'badge-confirmed' : 'badge-error');
+        badge.textContent = r.passed ? 'PASS' : 'FAIL';
+        row.appendChild(badge);
+        row.appendChild(document.createTextNode('  ' + r.label + ' — ' + r.detail));
+        panel.appendChild(row);
+      }
+      if (!allPass) {
+        const banner = document.createElement('div');
+        banner.style.color = 'var(--error)';
+        banner.style.marginTop = '0.5rem';
+        banner.style.fontWeight = '600';
+        banner.textContent = 'Verification failed. Sign button disabled until all gates pass.';
+        panel.appendChild(banner);
+      }
+      verificationPassed = allPass;
+      updateExecuteButton();
+      document.getElementById('verify-card').classList.remove('hidden');
+    }
+
+    function renderGroups() {
+      if (!plan || !plan.groups) return;
+      document.getElementById('summary-appid').textContent = plan.appId;
+      document.getElementById('summary-sender').textContent = plan.sender;
+      document.getElementById('summary-groups').textContent = plan.groups.length;
+      document.getElementById('summary-card').classList.remove('hidden');
+
+      const tbody = document.getElementById('groups-body');
+      while (tbody.firstChild) tbody.removeChild(tbody.firstChild);
+      plan.groups.forEach(function(g, i) {
+        const tr = document.createElement('tr');
+        const td1 = document.createElement('td');
+        td1.textContent = String(i + 1);
+        const td2 = document.createElement('td');
+        td2.textContent = g.description || ('Group ' + (i + 1));
+        const td3 = document.createElement('td');
+        td3.textContent = String((g.txns || []).length);
+        const td4 = document.createElement('td');
+        td4.id = 'status-' + i;
+        const badge = document.createElement('span');
+        badge.className = 'badge badge-pending';
+        badge.textContent = 'Pending';
+        td4.appendChild(badge);
+        tr.appendChild(td1);
+        tr.appendChild(td2);
+        tr.appendChild(td3);
+        tr.appendChild(td4);
+        tbody.appendChild(tr);
+      });
+      document.getElementById('groups-card').classList.remove('hidden');
+      document.getElementById('execute-card').classList.remove('hidden');
+      updateExecuteButton();
+    }
+
+    function setGroupStatus(i, cls, text) {
+      const el = document.getElementById('status-' + i);
+      if (!el) return;
+      while (el.firstChild) el.removeChild(el.firstChild);
+      const badge = document.createElement('span');
+      badge.className = 'badge ' + cls;
+      badge.textContent = text;
+      el.appendChild(badge);
+    }
+
+    function updateExecuteButton() {
+      const btn = document.getElementById('execute-btn');
+      btn.disabled = !(sender && plan && plan.groups && plan.groups.length > 0 && verificationPassed);
+    }
+
+    async function loadPlan(p) {
+      hideError('plan-error');
+      try {
+        if (!p.appId) throw new Error('Plan missing appId');
+        if (!p.sender) throw new Error('Plan missing sender');
+        if (!Array.isArray(p.groups)) throw new Error('Plan groups must be an array');
+        plan = p;
+        renderGroups();
+        log('Plan loaded: ' + p.groups.length + ' groups');
+        await runVerification(p);
+      } catch (e) {
+        showError('plan-error', e.message);
+      }
+    }
+
+    async function connectWallet() {
+      hideError('plan-error');
+      try {
+        const net = getNetwork();
+        const chainId = net === 'testnet' ? 416002 : 416001;
+        peraWallet = new PeraWalletConnect({ chainId: chainId });
+        document.getElementById('wc-uri-card').classList.remove('hidden');
+        const uriInput = document.getElementById('wc-uri-input');
+        uriInput.value = 'Pera Wallet QR modal active - scan with your phone';
+        const accounts = await peraWallet.connect();
+        sender = accounts[0];
+        setWalletStatus(true, 'Connected: ' + sender);
+        document.getElementById('connect-btn').textContent = 'Wallet Connected';
+        document.getElementById('connect-btn').disabled = true;
+        updateExecuteButton();
+        log('Wallet connected: ' + sender);
+      } catch (err) {
+        showError('plan-error', 'Wallet connection failed: ' + (err.message || err));
+      }
+    }
+
+    async function executeAll() {
+      if (!sender || !plan) return;
+      document.getElementById('results-card').classList.add('hidden');
+      document.getElementById('log-card').classList.remove('hidden');
+      const results = [];
+
+      for (let i = 0; i < plan.groups.length; i++) {
+        const group = plan.groups[i];
+        setGroupStatus(i, 'badge-signed', 'Signing...');
+        log('Group ' + (i + 1) + ' / ' + plan.groups.length + ': ' + (group.description || '...'));
+        try {
+          const txns = buildGroup(group, suggestedParams, plan.appId, sender);
+          const txids = txns.map(function(t) { return t.txID(); });
+          log('Group ' + (i + 1) + ' txids: ' + txids.join(', '));
+          setGroupStatus(i, 'badge-signed', 'Signed');
+
+          const submitRes = await signAndSubmitGroup(txns, sender, peraWallet);
+          log('Group ' + (i + 1) + ' submitted, txid: ' + submitRes.txId);
+          setGroupStatus(i, 'badge-submitted', 'Submitted');
+
+          const confirmed = await waitForConfirmation(txids, 600000, 10000);
+          log('Group ' + (i + 1) + ' confirmed in round ' + confirmed[0].confirmedRound);
+          setGroupStatus(i, 'badge-confirmed', 'Confirmed R' + confirmed[0].confirmedRound);
+
+          for (let c = 0; c < confirmed.length; c++) {
+            results.push({ group: i + 1, txid: confirmed[c].txid, round: confirmed[c].confirmedRound });
+          }
+        } catch (err) {
+          log('Group ' + (i + 1) + ' ERROR: ' + (err.message || err));
+          setGroupStatus(i, 'badge-error', 'Error');
+          showError('plan-error', 'Stopped at group ' + (i + 1) + ': ' + (err.message || err));
+          break;
+        }
+      }
+
+      const container = document.getElementById('results-container');
+      while (container.firstChild) container.removeChild(container.firstChild);
+      for (let r = 0; r < results.length; r++) {
+        const row = document.createElement('div');
+        row.className = 'result-value';
+        const link = document.createElement('a');
+        link.href = 'https://allo.info/tx/' + results[r].txid;
+        link.target = '_blank';
+        link.textContent = results[r].txid;
+        row.appendChild(document.createTextNode('Group ' + results[r].group + ': '));
+        row.appendChild(link);
+        row.appendChild(document.createTextNode(' (round ' + results[r].round + ')'));
+        container.appendChild(row);
+      }
+      document.getElementById('results-card').classList.remove('hidden');
+    }
+
+    async function init() {
+      try {
+        const abiPromise = fetchAbi();
+        const spPromise = getSuggestedParams();
+        abiMethods = await abiPromise;
+        suggestedParams = await spPromise;
+        log('ABI loaded: ' + abiMethods.size + ' methods');
+        log('Suggested params loaded');
+      } catch (e) {
+        showError('plan-error', 'Init failed: ' + e.message);
+        return;
+      }
+
+      const params = new URLSearchParams(window.location.search);
+      const srcParam = params.get('src');
+      if (srcParam) {
+        try {
+          const res = await fetch(srcParam);
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          const p = await res.json();
+          document.getElementById('plan-input').value = JSON.stringify(p, null, 2);
+          await loadPlan(p);
+        } catch (e) {
+          showError('plan-error', 'Failed to load plan from ?src=' + srcParam + ': ' + e.message);
+        }
+      } else {
+        const planParam = params.get('plan');
+        if (planParam) {
+          try {
+            const json = atob(planParam);
+            const p = JSON.parse(json);
+            document.getElementById('plan-input').value = JSON.stringify(p, null, 2);
+            await loadPlan(p);
+          } catch (e) {
+            showError('plan-error', 'Invalid ?plan= base64 JSON');
+          }
+        }
+      }
+    }
+
+    document.getElementById('load-btn').addEventListener('click', async function() {
+      hideError('plan-error');
+      try {
+        const val = document.getElementById('plan-input').value.trim();
+        const p = JSON.parse(val);
+        await loadPlan(p);
+      } catch (e) {
+        showError('plan-error', 'Invalid JSON: ' + e.message);
+      }
+    });
+
+    document.getElementById('connect-btn').addEventListener('click', connectWallet);
+    document.getElementById('execute-btn').addEventListener('click', executeAll);
+
+    window.addEventListener('load', init);
+  </script>
+</body>
+</html>

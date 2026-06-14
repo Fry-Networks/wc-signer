@@ -1,0 +1,2939 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FryGovernance Admin</title>
+  <style>
+    :root {
+      --bg-primary: #1a1a2e;
+      --bg-secondary: #16213e;
+      --bg-card: #0f3460;
+      --accent: #e74c3c;
+      --accent-hover: #c0392b;
+      --text: #eee;
+      --text-muted: #888;
+      --success: #27ae60;
+      --warning: #f39c12;
+      --error: #e74c3c;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 2rem;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 0.5rem;
+      color: var(--accent);
+    }
+
+    .subtitle {
+      text-align: center;
+      color: var(--text-muted);
+      margin-bottom: 2rem;
+    }
+
+    .card {
+      background: var(--bg-secondary);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .card-title {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.75rem;
+    }
+
+    .address {
+      font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+      font-size: 0.875rem;
+      word-break: break-all;
+      background: var(--bg-primary);
+      padding: 0.75rem;
+      border-radius: 6px;
+    }
+
+    .address.connected {
+      border-left: 3px solid var(--success);
+    }
+
+    .address.expected {
+      border-left: 3px solid var(--text-muted);
+    }
+
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--text-muted);
+    }
+
+    .status-dot.connected {
+      background: var(--success);
+    }
+
+    .status-dot.error {
+      background: var(--error);
+    }
+
+    button {
+      background: var(--accent);
+      color: white;
+      border: none;
+      padding: 0.875rem 1.5rem;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      transition: background 0.2s;
+    }
+
+    button:hover:not(:disabled) {
+      background: var(--accent-hover);
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    button.secondary {
+      background: var(--bg-card);
+    }
+
+    button.secondary:hover:not(:disabled) {
+      background: #1a4a80;
+    }
+
+    .network-selector {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .network-option {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem;
+      background: var(--bg-primary);
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .network-option input {
+      accent-color: var(--accent);
+    }
+
+    .network-option label {
+      cursor: pointer;
+    }
+
+    select, input[type="text"], input[type="number"] {
+      width: 100%;
+      padding: 0.75rem;
+      background: var(--bg-primary);
+      border: 1px solid var(--bg-card);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    select:focus, input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .form-group {
+      margin-bottom: 1rem;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      margin-bottom: 0.5rem;
+    }
+
+    .form-group small {
+      display: block;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 0.25rem;
+    }
+
+    .log-area {
+      background: var(--bg-primary);
+      border-radius: 6px;
+      padding: 1rem;
+      max-height: 200px;
+      overflow-y: auto;
+      font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+      font-size: 0.75rem;
+    }
+
+    .log-entry {
+      margin-bottom: 0.25rem;
+      line-height: 1.4;
+    }
+
+    .log-entry.info {
+      color: var(--text-muted);
+    }
+
+    .log-entry.success {
+      color: var(--success);
+    }
+
+    .log-entry.error {
+      color: var(--error);
+    }
+
+    .log-entry.warn {
+      color: var(--warning);
+    }
+
+    .result {
+      text-align: center;
+      padding: 2rem;
+    }
+
+    .result h2 {
+      color: var(--success);
+      margin-bottom: 1rem;
+    }
+
+    .result-value {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: var(--success);
+      margin-bottom: 1rem;
+      font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+      word-break: break-all;
+    }
+
+    .result-details {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+    }
+
+    .error-box {
+      background: rgba(231, 76, 60, 0.1);
+      border: 1px solid var(--error);
+      border-radius: 6px;
+      padding: 1rem;
+      margin-top: 1rem;
+      color: var(--error);
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    /* Batch mode badges */
+    .badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
+    .badge-pending { background: var(--warning); color: #000; }
+    .badge-signed { background: #3498db; color: #fff; }
+    .badge-confirmed { background: var(--success); color: #fff; }
+    .badge-error { background: var(--error); color: #fff; }
+
+    /* Batch table */
+    #batch-section table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+    #batch-section th, #batch-section td { padding: 0.5rem; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.1); }
+    #batch-section th { color: var(--text-muted); text-transform: uppercase; font-size: 0.75rem; }
+
+    .button-group {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+
+    .button-group button {
+      flex: 1;
+    }
+
+    .operation-info {
+      background: var(--bg-primary);
+      border-radius: 6px;
+      padding: 0.75rem;
+      margin-bottom: 1rem;
+      font-size: 0.875rem;
+      color: var(--text-muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>FryGovernance Admin</h1>
+    <p class="subtitle">Sign transactions with Pera Wallet</p>
+
+    <!-- Expected Admin -->
+    <div class="card">
+      <div class="card-title">Admin Wallet</div>
+      <div class="address expected" id="expected-address">Loading...</div>
+    </div>
+
+    <!-- Network Selector (always visible, BEFORE connection) -->
+    <div class="card">
+      <div class="card-title">Network</div>
+      <div class="network-selector">
+        <div class="network-option">
+          <input type="radio" name="network" id="net-testnet" value="testnet">
+          <label for="net-testnet">Testnet</label>
+        </div>
+        <div class="network-option">
+          <input type="radio" name="network" id="net-mainnet" value="mainnet" checked>
+          <label for="net-mainnet">Mainnet</label>
+        </div>
+      </div>
+      <div id="network-warning" class="hidden" style="color: var(--warning); font-size: 0.875rem; margin-top: 0.5rem;"></div>
+    </div>
+
+    <!-- Connection Status -->
+    <div class="card">
+      <div class="card-title">Wallet Connection</div>
+      <div id="connection-status">
+        <div class="status">
+          <div class="status-dot" id="status-dot"></div>
+          <span id="status-text">Not connected</span>
+        </div>
+        <div class="address connected hidden" id="connected-address"></div>
+      </div>
+      <div class="button-group">
+        <button id="connect-btn">Connect Pera Wallet</button>
+        <button id="disconnect-btn" class="secondary hidden">Disconnect</button>
+      </div>
+    </div>
+
+    <!-- Operations Section -->
+    <div class="card hidden" id="operations-section">
+      <div class="card-title">Execute Operation</div>
+
+      <div class="form-group">
+        <label for="operation-select">Operation</label>
+        <select id="operation-select">
+          <optgroup label="── Governance ──">
+            <option value="deploy">Deploy Contract</option>
+            <option value="create-fry-asa">Create FRY ASA (Testnet)</option>
+            <option value="opt-in-fry">Opt Contract into FRY</option>
+            <option value="set-min-balance">Set Min Balance</option>
+            <option value="fund-contract">Fund Contract</option>
+            <option value="create-vote">Create Vote</option>
+            <option value="close-vote">Close Vote</option>
+            <option value="update-contract">Update Contract</option>
+          </optgroup>
+          <optgroup label="── Genesis NFT Deploy ──">
+            <option value="genesis-deploy-nft">Deploy GenesisNFT</option>
+            <option value="genesis-deploy-router">Deploy FeeRouter</option>
+            <option value="genesis-deploy-pool">Deploy DistributionPool</option>
+          </optgroup>
+          <optgroup label="── Genesis NFT Configure ──">
+            <option value="genesis-fund">Fund Genesis Contract</option>
+            <option value="genesis-opt-in">Opt Contract into ASA</option>
+            <option value="genesis-set-pool">Set FeeRouter Pool Address</option>
+            <option value="genesis-set-pool-bps">Set FeeRouter Pool BPS</option>
+            <option value="genesis-set-base-uri">Set Base URI</option>
+            <option value="genesis-set-treasury">Set Treasury Address</option>
+            <option value="genesis-set-automation">Set DP Automation Address</option>
+            <option value="genesis-set-nft-app-id">Set DP NFT App ID</option>
+            <option value="genesis-pause">Pause / Unpause Minting</option>
+          </optgroup>
+          <optgroup label="── Genesis NFT Test ──">
+            <option value="genesis-mint">Mint NFT (Test)</option>
+            <option value="genesis-start-epoch">Start Distribution Epoch</option>
+            <option value="genesis-claim">Claim NFT Rewards</option>
+          </optgroup>
+          <optgroup label="── Genesis NFT Emergency ──">
+            <option value="genesis-emergency-fry">Emergency Withdraw FRY</option>
+            <option value="v1-dp-recovery">V1 DP Recovery (Cancel + Withdraw)</option>
+          </optgroup>
+          <optgroup label="-- FryMinerRewardPool --">
+            <option value="set-fee-address">Set Fee Address</option>
+          </optgroup>
+          <optgroup label="-- FryMarket Deploy --">
+            <option value="deploy-fry-market">Deploy FryMarket</option>
+            <option value="deploy-fry-auction">Deploy FryAuction</option>
+          </optgroup>
+          <optgroup label="-- FryMarket Configure --">
+            <option value="frymarket-fund">FryMarket: fund app account (default 1 ALGO)</option>
+            <option value="fryauction-fund">FryAuction: fund app account (default 1 ALGO)</option>
+            <option value="frymarket-admin-optin-fry">FryMarket: admin opt-in to FRY ASA</option>
+            <option value="fryauction-admin-optin-fry">FryAuction: admin opt-in to FRY ASA</option>
+          </optgroup>
+        </select>
+      </div>
+
+      <div class="operation-info" id="operation-info">
+        Deploy the FryGovernance contract to the selected network.
+      </div>
+
+      <!-- Dynamic Form Fields -->
+      <div id="form-fields">
+        <!-- Deploy fields -->
+        <div id="fields-deploy">
+          <div class="form-group">
+            <label for="fry-asa-id">FRY ASA ID</label>
+            <input type="text" id="fry-asa-id" placeholder="e.g., 2485314946">
+            <small>The FRY token ASA ID for this network</small>
+          </div>
+        </div>
+
+        <!-- Create FRY ASA fields -->
+        <div id="fields-create-fry-asa" class="hidden">
+          <div class="form-group">
+            <label>Token Parameters</label>
+            <small>Creates 10M FRY tokens with 6 decimals</small>
+          </div>
+        </div>
+
+        <!-- Opt-in FRY fields -->
+        <div id="fields-opt-in-fry" class="hidden">
+          <div class="form-group">
+            <label for="opt-app-id">Contract App ID</label>
+            <input type="number" id="opt-app-id" placeholder="e.g., 758020012">
+          </div>
+          <div class="form-group">
+            <label for="opt-fry-id">FRY ASA ID</label>
+            <input type="number" id="opt-fry-id" placeholder="e.g., 12345678">
+          </div>
+        </div>
+
+        <!-- Set Min Balance fields -->
+        <div id="fields-set-min-balance" class="hidden">
+          <div class="form-group">
+            <label for="minbal-app-id">Contract App ID</label>
+            <input type="number" id="minbal-app-id" placeholder="e.g., 758020012">
+          </div>
+          <div class="form-group">
+            <label for="min-balance">Min Balance (microFRY)</label>
+            <input type="number" id="min-balance" placeholder="e.g., 1000000" value="1000000">
+            <small>1,000,000 = 1 FRY (6 decimals)</small>
+          </div>
+        </div>
+
+        <!-- Fund Contract fields -->
+        <div id="fields-fund-contract" class="hidden">
+          <div class="form-group">
+            <label for="fund-app-id">Contract App ID</label>
+            <input type="number" id="fund-app-id" placeholder="e.g., 758020012">
+          </div>
+          <div class="form-group">
+            <label for="fund-amount">Amount (microALGO)</label>
+            <input type="number" id="fund-amount" placeholder="e.g., 10000000" value="10000000">
+            <small>10,000,000 = 10 ALGO</small>
+          </div>
+        </div>
+
+        <!-- Create Vote fields -->
+        <div id="fields-create-vote" class="hidden">
+          <div class="form-group">
+            <label for="vote-app-id">Contract App ID</label>
+            <input type="number" id="vote-app-id" placeholder="e.g., 758020012">
+          </div>
+          <div class="form-group">
+            <label for="vote-name">Vote Name/ID</label>
+            <input type="text" id="vote-name" placeholder="e.g., FIP-001">
+            <small>Will be hashed to create 32-byte vote ID</small>
+          </div>
+          <div class="form-group">
+            <label for="vote-type">Vote Type</label>
+            <select id="vote-type">
+              <option value="0">FIP (6-month lock)</option>
+              <option value="1">cFIP (6-month lock)</option>
+              <option value="2">Temperature Check (no lock)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="vote-options">Number of Options</label>
+            <input type="number" id="vote-options" value="3" min="2" max="8">
+            <small>2-8 options</small>
+          </div>
+          <div class="form-group">
+            <label for="vote-duration">Duration (days)</label>
+            <input type="number" id="vote-duration" value="30" min="1">
+          </div>
+          <div class="form-group">
+            <label for="vote-lock">Lock Duration (seconds)</label>
+            <input type="number" id="vote-lock" value="15768000">
+            <small>15,768,000 = 6 months. Set to 60 for quick testing.</small>
+          </div>
+        </div>
+
+        <!-- Close Vote fields -->
+        <div id="fields-close-vote" class="hidden">
+          <div class="form-group">
+            <label for="close-app-id">Contract App ID</label>
+            <input type="number" id="close-app-id" placeholder="e.g., 758020012">
+          </div>
+          <div class="form-group">
+            <label for="close-vote-name">Vote Name/ID</label>
+            <input type="text" id="close-vote-name" placeholder="e.g., FIP-001">
+            <small>Same name used when creating the vote</small>
+          </div>
+        </div>
+
+        <!-- Update Contract fields -->
+        <div id="fields-update-contract" class="hidden">
+          <div class="form-group">
+            <label for="update-app-id">Contract App ID</label>
+            <input type="number" id="update-app-id" placeholder="e.g., 3500693631" value="3500693631">
+            <small>Mainnet: 3500693631</small>
+          </div>
+        </div>
+
+        <!-- Genesis NFT Deploy fields -->
+        <div id="fields-genesis-deploy-nft" class="hidden">
+          <div class="form-group">
+            <label>Deployment Parameters (from config)</label>
+            <small>Admin, Treasury, Mint Price, Max Supply, USDC ASA, Base URI, Royalty BPS</small>
+          </div>
+        </div>
+
+        <div id="fields-genesis-deploy-router" class="hidden">
+          <div class="form-group">
+            <label>Deployment Parameters (from config)</label>
+            <small>Admin, Treasury, Pool (set later), Pool BPS</small>
+          </div>
+        </div>
+
+        <div id="fields-genesis-deploy-pool" class="hidden">
+          <div class="form-group">
+            <label for="genesis-pool-nft-app-id">GenesisNFT App ID</label>
+            <input type="number" id="genesis-pool-nft-app-id" placeholder="e.g., 12345678">
+            <small>The deployed GenesisNFT contract App ID</small>
+          </div>
+        </div>
+
+        <!-- Genesis NFT Configure fields -->
+        <div id="fields-genesis-fund" class="hidden">
+          <div class="form-group">
+            <label for="genesis-fund-app-id">Contract App ID</label>
+            <input type="number" id="genesis-fund-app-id" placeholder="e.g., 12345678">
+          </div>
+          <div class="form-group">
+            <label for="genesis-fund-amount">Amount (microALGO)</label>
+            <input type="number" id="genesis-fund-amount" placeholder="e.g., 10000000" value="10000000">
+            <small>10,000,000 = 10 ALGO</small>
+          </div>
+        </div>
+
+        <div id="fields-genesis-opt-in" class="hidden">
+          <div class="form-group">
+            <label for="genesis-opt-app-id">Contract App ID</label>
+            <input type="number" id="genesis-opt-app-id" placeholder="e.g., 12345678">
+          </div>
+          <div class="form-group">
+            <label for="genesis-opt-asa-id">ASA ID</label>
+            <input type="number" id="genesis-opt-asa-id" placeholder="e.g., 31566704">
+            <small>USDC: 31566704, FRY: 2485314946</small>
+          </div>
+        </div>
+
+        <div id="fields-genesis-set-pool" class="hidden">
+          <div class="form-group">
+            <label for="genesis-router-app-id">FeeRouter App ID</label>
+            <input type="number" id="genesis-router-app-id" placeholder="e.g., 12345678">
+          </div>
+          <div class="form-group">
+            <label for="genesis-pool-app-id">DistributionPool App ID</label>
+            <input type="number" id="genesis-pool-app-id" placeholder="e.g., 12345678">
+          </div>
+        </div>
+
+        <div id="fields-genesis-set-pool-bps" class="hidden">
+          <div class="form-group">
+            <label for="genesis-bps-router-app-id">FeeRouter App ID</label>
+            <input type="number" id="genesis-bps-router-app-id" placeholder="e.g., 3509411111" value="3509411111">
+          </div>
+          <div class="form-group">
+            <label for="genesis-bps-value">Pool BPS (0-5000)</label>
+            <input type="number" id="genesis-bps-value" placeholder="e.g., 1000" value="0" min="0" max="5000">
+            <small>0 = no pool split, 1000 = 10%, 5000 = 50% max</small>
+          </div>
+        </div>
+
+        <div id="fields-genesis-set-base-uri" class="hidden">
+          <div class="form-group">
+            <label for="genesis-uri-app-id">GenesisNFT App ID</label>
+            <input type="number" id="genesis-uri-app-id" placeholder="e.g., 12345678">
+          </div>
+          <div class="form-group">
+            <label for="genesis-base-uri">Base URI</label>
+            <input type="text" id="genesis-base-uri" value="https://fry.farm/genesis/metadata/">
+          </div>
+        </div>
+
+        <div id="fields-genesis-set-treasury" class="hidden">
+          <div class="form-group">
+            <label for="genesis-treasury-app-id">App ID (GenesisNFT or FeeRouter)</label>
+            <input type="number" id="genesis-treasury-app-id" placeholder="e.g., 12345678">
+          </div>
+          <div class="form-group">
+            <label for="genesis-treasury-addr">Treasury Address</label>
+            <input type="text" id="genesis-treasury-addr" value="E2F2LT2INE75DBOYHQXTCTOP2PAP5MHAXQRXTTCCXFKHQTVG36DJONBQZE">
+          </div>
+        </div>
+
+        <div id="fields-genesis-set-automation" class="hidden">
+          <div class="form-group">
+            <label for="genesis-automation-pool-app-id">DistributionPool App ID</label>
+            <input type="number" id="genesis-automation-pool-app-id" placeholder="e.g., 12345678">
+          </div>
+          <div class="form-group">
+            <label for="genesis-automation-addr">Automation Address</label>
+            <input type="text" id="genesis-automation-addr" placeholder="ALGO address of automation wallet">
+          </div>
+        </div>
+
+        <div id="fields-genesis-set-nft-app-id" class="hidden">
+          <div class="form-group">
+            <label for="genesis-nftappid-pool-app-id">DistributionPool App ID</label>
+            <input type="number" id="genesis-nftappid-pool-app-id" placeholder="e.g., 12345678">
+          </div>
+          <div class="form-group">
+            <label for="genesis-nftappid-value">GenesisNFT App ID</label>
+            <input type="number" id="genesis-nftappid-value" placeholder="e.g., 3509410324" value="3509410324">
+          </div>
+        </div>
+
+        <div id="fields-genesis-pause" class="hidden">
+          <div class="form-group">
+            <label for="genesis-pause-app-id">GenesisNFT App ID</label>
+            <input type="number" id="genesis-pause-app-id" placeholder="e.g., 12345678">
+          </div>
+          <div class="form-group">
+            <label>Pause Value</label>
+            <div style="display: flex; gap: 1rem; margin-top: 0.5rem;">
+              <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                <input type="radio" name="genesis-pause-value" value="1"> Pause (1)
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                <input type="radio" name="genesis-pause-value" value="0" checked> Unpause (0)
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Genesis NFT Test fields -->
+        <div id="fields-genesis-mint" class="hidden">
+          <div class="form-group">
+            <label for="genesis-mint-app-id">GenesisNFT App ID</label>
+            <input type="number" id="genesis-mint-app-id" placeholder="e.g., 12345678">
+            <small>Will pay 175 USDC to mint</small>
+          </div>
+        </div>
+
+        <div id="fields-genesis-start-epoch" class="hidden">
+          <div class="form-group">
+            <label for="genesis-epoch-app-id">DistributionPool App ID</label>
+            <input type="number" id="genesis-epoch-app-id" placeholder="e.g., 12345678">
+            <small>Uses pool's current FRY balance. Caller must be automation address.</small>
+          </div>
+        </div>
+
+        <div id="fields-genesis-claim" class="hidden">
+          <div class="form-group">
+            <label for="genesis-claim-pool-id">DistributionPool App ID</label>
+            <input type="number" id="genesis-claim-pool-id" placeholder="e.g., 12345678">
+          </div>
+          <div class="form-group">
+            <label for="genesis-claim-nft-id">GenesisNFT App ID</label>
+            <input type="number" id="genesis-claim-nft-id" placeholder="e.g., 12345678">
+          </div>
+          <div class="form-group">
+            <label for="genesis-claim-token-id">Token ID</label>
+            <input type="number" id="genesis-claim-token-id" placeholder="e.g., 1">
+          </div>
+          <div class="form-group">
+            <label for="genesis-claim-epoch">Epoch Number</label>
+            <input type="number" id="genesis-claim-epoch" placeholder="e.g., 1">
+            <small>The epoch to claim rewards from</small>
+          </div>
+        </div>
+
+        <!-- Genesis NFT Emergency fields -->
+        <div id="fields-genesis-emergency-fry" class="hidden">
+          <div class="form-group">
+            <label for="genesis-emergency-app-id">DistributionPool App ID</label>
+            <input type="number" id="genesis-emergency-app-id" placeholder="e.g., 12345678">
+          </div>
+          <div class="form-group">
+            <label for="genesis-emergency-amount">Amount (microFRY)</label>
+            <input type="number" id="genesis-emergency-amount" placeholder="e.g., 1000000">
+          </div>
+          <div class="form-group">
+            <label for="genesis-emergency-receiver">Receiver Address</label>
+            <input type="text" id="genesis-emergency-receiver" value="E2F2LT2INE75DBOYHQXTCTOP2PAP5MHAXQRXTTCCXFKHQTVG36DJONBQZE">
+          </div>
+          <div id="fields-frymarket-fund" class="hidden">
+            <div class="form-group">
+              <label for="frymarket-fund-app-id">FryMarket App ID</label>
+              <input type="number" id="frymarket-fund-app-id" placeholder="Enter FryMarket App ID">
+            </div>
+            <div class="form-group">
+              <label for="frymarket-fund-amount">Amount (microAlgos)</label>
+              <input type="number" id="frymarket-fund-amount" value="1000000" placeholder="1000000 = 1 ALGO">
+            </div>
+          </div>
+          <div id="fields-fryauction-fund" class="hidden">
+            <div class="form-group">
+              <label for="fryauction-fund-app-id">FryAuction App ID</label>
+              <input type="number" id="fryauction-fund-app-id" placeholder="Enter FryAuction App ID">
+            </div>
+            <div class="form-group">
+              <label for="fryauction-fund-amount">Amount (microAlgos)</label>
+              <input type="number" id="fryauction-fund-amount" value="1000000" placeholder="1000000 = 1 ALGO">
+            </div>
+          </div>
+          <div id="fields-frymarket-admin-optin-fry" class="hidden">
+            <div class="form-group">
+              <label for="frymarket-optin-app-id">FryMarket App ID</label>
+              <input type="number" id="frymarket-optin-app-id" placeholder="Enter FryMarket App ID from deploy step">
+            </div>
+          </div>
+          <div id="fields-fryauction-admin-optin-fry" class="hidden">
+            <div class="form-group">
+              <label for="fryauction-optin-app-id">FryAuction App ID</label>
+              <input type="number" id="fryauction-optin-app-id" placeholder="Enter FryAuction App ID from deploy step">
+            </div>
+          </div>
+        </div>
+
+        <!-- FryMinerRewardPool Set Fee Address -->
+        <div id="fields-set-fee-address" class="hidden">
+          <div class="form-group">
+            <label for="set-fee-app-id">Contract App ID</label>
+            <input type="number" id="set-fee-app-id" placeholder="e.g., 3592975326" value="3592975326">
+            <small>Mainnet: 3592975326</small>
+          </div>
+          <div class="form-group">
+            <label for="set-fee-address-input">New Fee Address</label>
+            <input type="text" id="set-fee-address-input" placeholder="Algorand address" value="U5TA6XANQ7G3XTKTBP5VEUXHSHZO2GWMZN75OU3BIHTQ5D7LDXZA7ATXSI">
+            <small>The new fee address must be opted into tFRY + fNODE</small>
+          </div>
+        </div>
+
+        <!-- V1 DP Recovery fields -->
+        <div id="fields-v1-dp-recovery" class="hidden">
+          <div class="form-group">
+            <label>V1 DistributionPool Recovery</label>
+            <small>App 3547212093 &mdash; Cancel active epoch + withdraw all FRY to connected wallet.
+            If epoch already cancelled, use Emergency Withdraw FRY instead.</small>
+          </div>
+        </div>
+      </div>
+
+      <button id="execute-btn">Execute</button>
+    </div>
+
+    <!-- Batch Plan Section (hidden unless ?src= param present) -->
+    <div id="batch-section" style="display:none">
+      <div class="card" id="batch-hash-card">
+        <div class="card-title">Plan Integrity</div>
+        <div style="font-family:monospace;font-size:0.8rem;word-break:break-all;">
+          <span style="color:var(--text-muted)">SHA-256:</span> <span id="batch-hash-value">—</span>
+        </div>
+        <div id="batch-hash-status" style="margin-top:0.5rem;"></div>
+      </div>
+      <div class="card" id="batch-verify-card">
+        <div class="card-title">Verification Gates</div>
+        <div id="batch-verify-panel"></div>
+      </div>
+      <div class="card" id="batch-summary-card">
+        <div class="card-title">Plan Summary</div>
+        <div style="font-size:0.875rem;">
+          <div><span style="color:var(--text-muted)">App ID:</span> <span id="batch-summary-appid"></span></div>
+          <div><span style="color:var(--text-muted)">Sender:</span> <span id="batch-summary-sender" style="font-family:monospace;font-size:0.8rem;word-break:break-all;"></span></div>
+          <div><span style="color:var(--text-muted)">Network:</span> <span id="batch-summary-network"></span></div>
+          <div><span style="color:var(--text-muted)">Groups:</span> <span id="batch-summary-groups"></span></div>
+        </div>
+      </div>
+      <div class="card" id="batch-groups-card">
+        <div class="card-title">Groups</div>
+        <table><thead><tr><th>#</th><th>Description</th><th>Txns</th><th>Status</th></tr></thead>
+        <tbody id="batch-groups-body"></tbody></table>
+      </div>
+      <div class="card" id="batch-preview-card">
+        <div class="card-title">Transaction Preview</div>
+        <div id="batch-preview-container"></div>
+      </div>
+      <button id="batch-execute-btn" disabled style="width:100%;margin-bottom:1rem;">Sign &amp; Submit All Groups</button>
+      <div class="card" id="batch-results-card" style="display:none">
+        <div class="card-title">Results</div>
+        <div id="batch-results-container"></div>
+      </div>
+    </div>
+
+    <!-- Log Area -->
+    <div class="card">
+      <div class="card-title">Activity Log</div>
+      <div class="log-area" id="log-area">
+        <div class="log-entry info">Waiting for wallet connection...</div>
+      </div>
+    </div>
+
+    <!-- Error Display -->
+    <div class="error-box hidden" id="error-box"></div>
+
+    <!-- Success Result -->
+    <div class="card hidden" id="result-section">
+      <div class="result">
+        <h2 id="result-title">Success!</h2>
+        <div class="result-value" id="result-value"></div>
+        <div class="result-details">
+          <div>Transaction: <span id="result-txid"></span></div>
+          <div>Confirmed Round: <span id="result-round"></span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Error handlers for debugging module load failures
+    window.addEventListener('error', function(e) {
+      console.error('[wc-signer] Uncaught error:', e.error || e.message);
+    });
+    window.addEventListener('unhandledrejection', function(e) {
+      console.error('[wc-signer] Unhandled rejection:', e.reason);
+    });
+  </script>
+
+  <script>
+    // Polyfills for Node.js globals that WalletConnect may reference
+    if (typeof global === 'undefined') { window.global = window; }
+    if (typeof process === 'undefined') { window.process = { env: { NODE_ENV: 'production' } }; }
+  </script>
+
+  <script src="/bundle.js"></script>
+  <script>
+    // PeraWalletConnect, algosdk, and sha512_256 are now globals from bundle.js
+    const { PeraWalletConnect, sha512_256 } = window;
+    const algosdk = window.algosdk;
+
+    // Verify modules loaded
+    console.log("[wc-signer] Modules loaded:", { algosdk: !!algosdk, PeraWalletConnect: !!PeraWalletConnect });
+
+    // ==========================================================================
+    // Constants
+    // ==========================================================================
+
+    const VOTE_BOX_MBR = 104100n;  // microAlgos for vote box (BigInt for algosdk v3)
+    const STAKE_BOX_MBR = 61700n;  // microAlgos for stake box (BigInt for algosdk v3)
+    const VOTE_BOX_PREFIX = new Uint8Array([0x76]); // "v"
+
+    // Operation descriptions
+    const OPERATION_INFO = {
+      "deploy": "Deploy the FryGovernance contract to the selected network.",
+      "create-fry-asa": "Create a test FRY token on testnet (10M supply, 6 decimals).",
+      "opt-in-fry": "Opt the contract into the FRY ASA so it can receive tokens.",
+      "set-min-balance": "Set minimum FRY balance required for temperature check voting.",
+      "fund-contract": "Send ALGO to the contract for box storage costs.",
+      "create-vote": "Create a new vote (FIP, cFIP, or Temperature Check).",
+      "close-vote": "Close a vote (admin only, prevents further voting).",
+      "update-contract": "Update the contract approval/clear programs (creator only).",
+      // Genesis NFT operations
+      "genesis-deploy-nft": "Deploy GenesisNFT. Admin: E2F2...BQZE, Mint: 175 USDC, Max: 1000, Royalty: 5%",
+      "genesis-deploy-router": "Deploy FeeRouter. Admin: E2F2...BQZE, Pool BPS: 1000 (10%)",
+      "genesis-deploy-pool": "Deploy DistributionPool. FRY ASA: 2485314946, Total Supply: 1000",
+      "genesis-fund": "Send ALGO to a Genesis contract for MBR/box costs.",
+      "genesis-opt-in": "Opt a Genesis contract into an ASA (USDC: 31566704, FRY: 2485314946).",
+      "genesis-set-pool": "Set the DistributionPool address on FeeRouter.",
+      "genesis-set-pool-bps": "Set the fee split ratio on FeeRouter (0-5000 BPS, 1000 = 10%).",
+      "genesis-set-automation": "Set the automation address on DistributionPool (wallet that can call start_epoch).",
+      "genesis-set-nft-app-id": "Set the GenesisNFT app ID on DistributionPool (for ownerOf cross-call).",
+      "genesis-set-base-uri": "Update the NFT metadata base URI on GenesisNFT.",
+      "genesis-set-treasury": "Update the treasury address on GenesisNFT or FeeRouter.",
+      "genesis-pause": "Pause or unpause minting on GenesisNFT.",
+      "genesis-mint": "Mint a Genesis NFT (pays 175 USDC).",
+      "genesis-start-epoch": "Start a new distribution epoch with FRY rewards.",
+      "genesis-claim": "Claim FRY rewards for an NFT from a distribution epoch.",
+      "genesis-emergency-fry": "Emergency withdraw FRY from DistributionPool (admin only).",
+      "deploy-fry-market": "Deploy FryMarket contract. Admin: E2F2LT2I..., FRY: 2485314946, Fees: 3%/1%",
+      "deploy-fry-auction": "Deploy FryAuction contract. Same config as FryMarket.",
+      "frymarket-fund": "Send ALGO to FryMarket app account for MBR (default 1 ALGO).",
+      "fryauction-fund": "Send ALGO to FryAuction app account for MBR (default 1 ALGO).",
+      "frymarket-admin-optin-fry": "Opt FryMarket contract into FRY ASA (inner txn, extra fee).",
+      "fryauction-admin-optin-fry": "Opt FryAuction contract into FRY ASA (inner txn, extra fee).",
+      "set-fee-address": "Set the fee_address on FryMinerRewardPool contract (owner only)."
+    };
+
+    // ==========================================================================
+    // State
+    // ==========================================================================
+
+    let config = null;
+    let abiSpec = null;
+    let genesisConfig = null;
+      let frymarketConfig = null;
+    let peraWallet = null;
+    let connectedAddress = null;
+
+    // Network configuration for Pera Wallet
+    const NETWORK_CONFIG = {
+      testnet: { network: "testnet", chainId: 416002 },
+      mainnet: { network: "mainnet", chainId: 416001 }
+    };
+
+    // ==========================================================================
+    // DOM Elements
+    // ==========================================================================
+
+    const expectedAddressEl = document.getElementById("expected-address");
+    const statusDotEl = document.getElementById("status-dot");
+    const statusTextEl = document.getElementById("status-text");
+    const connectedAddressEl = document.getElementById("connected-address");
+    const connectBtn = document.getElementById("connect-btn");
+    const disconnectBtn = document.getElementById("disconnect-btn");
+    const operationsSectionEl = document.getElementById("operations-section");
+    const operationSelectEl = document.getElementById("operation-select");
+    const operationInfoEl = document.getElementById("operation-info");
+    const executeBtn = document.getElementById("execute-btn");
+    const logAreaEl = document.getElementById("log-area");
+    const errorBoxEl = document.getElementById("error-box");
+    const resultSectionEl = document.getElementById("result-section");
+    const resultTitleEl = document.getElementById("result-title");
+    const resultValueEl = document.getElementById("result-value");
+    const resultTxidEl = document.getElementById("result-txid");
+    const resultRoundEl = document.getElementById("result-round");
+
+    // ==========================================================================
+    // Logging
+    // ==========================================================================
+
+    function log(message, level = "info") {
+      const entry = document.createElement("div");
+      entry.className = `log-entry ${level}`;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      logAreaEl.appendChild(entry);
+      logAreaEl.scrollTop = logAreaEl.scrollHeight;
+    }
+
+    function showError(message) {
+      errorBoxEl.textContent = message;
+      errorBoxEl.classList.remove("hidden");
+      log(message, "error");
+    }
+
+    function hideError() {
+      errorBoxEl.classList.add("hidden");
+    }
+
+    // ==========================================================================
+    // Helpers
+    // ==========================================================================
+
+    function getSelectedNetwork() {
+      return document.querySelector('input[name="network"]:checked').value;
+    }
+
+    function getAlgodClient(network) {
+      const algodUrl = config.algodEndpoints[network];
+      return new algosdk.Algodv2("", algodUrl, "");
+    }
+
+    function sha256(data) {
+      // Use sha512_256 from js-sha512 (algosdk v3 removed nacl.genericHash)
+      return new Uint8Array(sha512_256.array(data));
+    }
+
+    function makeVoteId(name) {
+      const encoder = new TextEncoder();
+      return sha256(encoder.encode(name));
+    }
+
+    function encodeUint64(value) {
+      const bytes = new Uint8Array(8);
+      const view = new DataView(bytes.buffer);
+      view.setBigUint64(0, BigInt(value), false); // big-endian
+      return bytes;
+    }
+
+    function encodeString(str) {
+      const encoder = new TextEncoder();
+      const bytes = encoder.encode(str);
+      const len = new Uint8Array(2);
+      new DataView(len.buffer).setUint16(0, bytes.length, false); // big-endian length prefix
+      const result = new Uint8Array(2 + bytes.length);
+      result.set(len, 0);
+      result.set(bytes, 2);
+      return result;
+    }
+
+    function encodeAddress(addr) {
+      return algosdk.decodeAddress(addr).publicKey;
+    }
+
+    function getMethodSelector(methodSignature) {
+      // Method selector = first 4 bytes of sha512_256(method_signature)
+      const encoder = new TextEncoder();
+      const hash = sha512_256.array(encoder.encode(methodSignature));
+      return new Uint8Array(hash.slice(0, 4));
+    }
+
+    async function signAndSubmit(txns, network) {
+      // txns can be single txn or array for atomic group
+      const txnArray = Array.isArray(txns) ? txns : [txns];
+
+      // Format for Pera: [[{txn}, {txn}, ...]]
+      const signerTxns = txnArray.map(txn => ({ txn }));
+
+      log("Requesting signature from Pera Wallet...", "warn");
+      const signedTxns = await peraWallet.signTransaction([signerTxns]);
+
+      if (!signedTxns || signedTxns.length === 0) {
+        throw new Error("No signed transactions returned");
+      }
+
+      log("Transaction(s) signed!", "success");
+
+      // Submit each signed transaction
+      log("Submitting to network...");
+      const algodClient = getAlgodClient(network);
+
+      // For atomic groups, concatenate all signed txns
+      let signedBlob;
+      if (txnArray.length > 1) {
+        // Concatenate for atomic group
+        const totalLen = signedTxns.reduce((sum, t) => sum + t.length, 0);
+        signedBlob = new Uint8Array(totalLen);
+        let offset = 0;
+        for (const t of signedTxns) {
+          signedBlob.set(t, offset);
+          offset += t.length;
+        }
+      } else {
+        signedBlob = signedTxns[0];
+      }
+
+      const signedTxnBase64 = btoa(String.fromCharCode(...signedBlob));
+
+      const submitRes = await fetch("/api/submit-signed", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ network, signedTxn: signedTxnBase64 }),
+      });
+
+      if (!submitRes.ok) {
+        const err = await submitRes.json();
+        throw new Error(err.message || "Submission failed");
+      }
+
+      return await submitRes.json();
+    }
+
+    // ==========================================================================
+    // Config & ABI
+    // ==========================================================================
+
+    async function fetchConfig() {
+      try {
+        const response = await fetch("/api/config");
+        if (!response.ok) throw new Error("Failed to fetch config");
+        config = await response.json();
+        expectedAddressEl.textContent = config.expectedDeployer;
+        log("Configuration loaded");
+      } catch (err) {
+        showError(`Failed to load config: ${err.message}`);
+      }
+    }
+
+    async function fetchAbi() {
+      try {
+        const response = await fetch("/api/abi");
+        if (!response.ok) throw new Error("Failed to fetch ABI");
+        abiSpec = await response.json();
+        log("ABI specification loaded");
+      } catch (err) {
+        log(`Warning: Could not load ABI: ${err.message}`, "warn");
+      }
+    }
+
+    async function fetchGenesisConfig() {
+      try {
+        const response = await fetch("/api/genesis/config");
+        if (!response.ok) throw new Error("Failed to fetch Genesis config");
+        genesisConfig = await response.json();
+        log("Genesis config loaded");
+      } catch (err) {
+        log(`Warning: Could not load Genesis config: ${err.message}`, "warn");
+      }
+    }
+
+    async function fetchFryMarketConfig() {
+      try {
+        const response = await fetch("/api/frymarket/config");
+        if (!response.ok) throw new Error("Failed to fetch FryMarket config");
+        frymarketConfig = await response.json();
+        log("FryMarket config loaded");
+      } catch (err) {
+        log(`Warning: Could not load FryMarket config: ${err.message}`, "warn");
+      }
+    }
+
+    // ==========================================================================
+    // Operation UI
+    // ==========================================================================
+
+    function updateOperationUI() {
+      const operation = operationSelectEl.value;
+
+      // Update info text
+      operationInfoEl.textContent = OPERATION_INFO[operation] || "";
+
+      // Hide all field groups
+      document.querySelectorAll("#form-fields > div").forEach(el => {
+        el.classList.add("hidden");
+      });
+
+      // Show relevant field group
+      const fieldsEl = document.getElementById(`fields-${operation}`);
+      if (fieldsEl) {
+        fieldsEl.classList.remove("hidden");
+      }
+    }
+
+    // ==========================================================================
+    // Wallet Connection
+    // ==========================================================================
+
+    function updateConnectionUI(connected, address = null) {
+      if (connected && address) {
+        statusDotEl.classList.add("connected");
+        statusTextEl.textContent = "Connected";
+        connectedAddressEl.textContent = address;
+        connectedAddressEl.classList.remove("hidden");
+        connectBtn.classList.add("hidden");
+        disconnectBtn.classList.remove("hidden");
+        operationsSectionEl.classList.remove("hidden");
+      } else {
+        statusDotEl.classList.remove("connected");
+        statusTextEl.textContent = "Not connected";
+        connectedAddressEl.classList.add("hidden");
+        connectBtn.classList.remove("hidden");
+        disconnectBtn.classList.add("hidden");
+        operationsSectionEl.classList.add("hidden");
+      }
+    }
+
+    async function connectWallet() {
+      hideError();
+      log("Connecting to Pera Wallet...");
+      connectBtn.disabled = true;
+
+      try {
+        const network = getSelectedNetwork();
+        if (peraWallet) {
+          try { await peraWallet.disconnect(); } catch(e) {}
+        }
+        peraWallet = new PeraWalletConnect({ chainId: NETWORK_CONFIG[network].chainId });
+        window._pw = peraWallet; // expose for automation URI extraction
+        log(`Using network: ${network}`);
+
+        const accounts = await peraWallet.connect();
+
+        if (!accounts || accounts.length === 0) {
+          throw new Error("No accounts returned from wallet");
+        }
+
+        const address = accounts[0];
+        log(`Wallet connected: ${address.substring(0, 8)}...`);
+
+        // Verify address matches expected admin
+        if (address !== config.expectedDeployer) {
+          await peraWallet.disconnect();
+          throw new Error(`Wrong wallet! Expected ${config.expectedDeployer.substring(0, 8)}... but got ${address.substring(0, 8)}...`);
+        }
+
+        connectedAddress = address;
+        updateConnectionUI(true, address);
+        log("Address verified - ready for operations", "success");
+
+        // Batch mode: verify address matches plan sender and enable execute
+        if (batchMode && batchPlan) {
+          if (address !== batchPlan.sender) {
+            await peraWallet.disconnect();
+            throw new Error("Wrong wallet for batch plan! Expected " + batchPlan.sender.substring(0, 8) + "...");
+          }
+          batchUpdateExecuteButton();
+          log("Batch mode: wallet verified for plan execution", "success");
+        }
+
+        peraWallet.connector?.on("disconnect", () => {
+          log("Wallet disconnected");
+          connectedAddress = null;
+          updateConnectionUI(false);
+        });
+
+      } catch (err) {
+        showError(err.message);
+        updateConnectionUI(false);
+      } finally {
+        connectBtn.disabled = false;
+      }
+    }
+
+    async function disconnectWallet() {
+      if (peraWallet) {
+        await peraWallet.disconnect();
+      }
+      connectedAddress = null;
+      updateConnectionUI(false);
+      // Clear stale WalletConnect sessions from localStorage
+      clearWalletConnectSessions();
+      log("Disconnected from wallet");
+    }
+
+    function clearWalletConnectSessions() {
+      try {
+        Object.keys(localStorage).forEach(k => {
+          if (k.startsWith('walletconnect') || k.startsWith('wc@') || k.includes('pera')) {
+            localStorage.removeItem(k);
+          }
+        });
+      } catch(e) {
+        console.warn('[wc-signer] Could not clear localStorage:', e);
+      }
+    }
+
+    function handleNetworkChange() {
+      const warningEl = document.getElementById('network-warning');
+      if (connectedAddress) {
+        // Auto-disconnect when network changes while connected
+        warningEl.textContent = 'Network changed — disconnecting wallet...';
+        warningEl.classList.remove('hidden');
+        disconnectWallet().then(() => {
+          warningEl.textContent = 'Network changed — please reconnect.';
+          setTimeout(() => warningEl.classList.add('hidden'), 3000);
+        });
+      } else {
+        warningEl.classList.add('hidden');
+      }
+    }
+
+    // ==========================================================================
+    // Transaction Builders
+    // ==========================================================================
+
+    async function executeDeploy(network) {
+      const fryAsaId = document.getElementById("fry-asa-id").value;
+      if (!fryAsaId) throw new Error("FRY ASA ID is required");
+
+      log("Compiling TEAL programs...");
+      const compileRes = await fetch("/api/compile-teal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ network }),
+      });
+
+      if (!compileRes.ok) {
+        const err = await compileRes.json();
+        throw new Error(err.message || "Compilation failed");
+      }
+
+      const { approvalProgram, clearProgram, approvalSize, clearSize } = await compileRes.json();
+      log(`Compiled: approval=${approvalSize} bytes, clear=${clearSize} bytes`);
+
+      const approvalBytes = Uint8Array.from(atob(approvalProgram), c => c.charCodeAt(0));
+      const clearBytes = Uint8Array.from(atob(clearProgram), c => c.charCodeAt(0));
+
+      log("Building deploy transaction...");
+      const algodClient = getAlgodClient(network);
+      const suggestedParams = await algodClient.getTransactionParams().do();
+
+      // Method selector for create(uint64)void
+      const methodSelector = getMethodSelector("create(uint64)void");
+      const fryAsaIdBytes = encodeUint64(fryAsaId);
+
+      const txn = algosdk.makeApplicationCreateTxnFromObject({
+        sender: connectedAddress,
+        suggestedParams,
+        approvalProgram: approvalBytes,
+        clearProgram: clearBytes,
+        numGlobalInts: config.stateSchema.numGlobalInts,
+        numGlobalByteSlices: config.stateSchema.numGlobalByteSlices,
+        numLocalInts: config.stateSchema.numLocalInts,
+        numLocalByteSlices: config.stateSchema.numLocalByteSlices,
+        appArgs: [methodSelector, fryAsaIdBytes],
+        onComplete: algosdk.OnApplicationComplete.NoOpOC,
+      });
+
+      const result = await signAndSubmit(txn, network);
+      return { title: "Deployment Successful!", value: `App ID: ${result.appId}`, ...result };
+    }
+
+    async function executeCreateFryAsa(network) {
+      if (network !== "testnet") {
+        throw new Error("Create FRY ASA is only allowed on testnet");
+      }
+
+      log("Building ASA create transaction...");
+      const algodClient = getAlgodClient(network);
+      const suggestedParams = await algodClient.getTransactionParams().do();
+
+      const txn = algosdk.makeAssetCreateTxnWithSuggestedParamsFromObject({
+        sender: connectedAddress,
+        suggestedParams,
+        total: BigInt("10000000000000"), // 10M with 6 decimals
+        decimals: 6,
+        defaultFrozen: false,
+        unitName: "FRY",
+        assetName: "Fry Token (Testnet)",
+        manager: connectedAddress,
+        reserve: connectedAddress,
+        freeze: connectedAddress,
+        clawback: connectedAddress,
+      });
+
+      const result = await signAndSubmit(txn, network);
+
+      // Get asset ID from confirmed transaction
+      const algodClient2 = getAlgodClient(network);
+      const txInfo = await algodClient2.pendingTransactionInformation(result.txId).do();
+      const assetId = Number(txInfo.assetIndex || txInfo["asset-index"] || 0);
+
+      return { title: "FRY ASA Created!", value: `ASA ID: ${assetId}`, ...result, assetId };
+    }
+
+    async function executeOptInFry(network) {
+      const appId = parseInt(document.getElementById("opt-app-id").value);
+      const fryAsaId = parseInt(document.getElementById("opt-fry-id").value);
+      if (!appId || !fryAsaId) throw new Error("App ID and FRY ASA ID are required");
+
+      log("Building opt-in transaction...");
+      const algodClient = getAlgodClient(network);
+      const suggestedParams = await algodClient.getTransactionParams().do();
+
+      // Add extra fee for inner transaction (use BigInt literal for algosdk v3)
+      suggestedParams.fee = suggestedParams.minFee * 2n;
+      suggestedParams.flatFee = true;
+
+      // Method selector for opt_in_fry()void
+      const methodSelector = getMethodSelector("opt_in_fry()void");
+
+      const txn = algosdk.makeApplicationCallTxnFromObject({
+        sender: connectedAddress,
+        suggestedParams,
+        appIndex: appId,
+        appArgs: [methodSelector],
+        foreignAssets: [fryAsaId],
+        onComplete: algosdk.OnApplicationComplete.NoOpOC,
+      });
+
+      const result = await signAndSubmit(txn, network);
+      return { title: "Opt-In Successful!", value: `Contract opted into FRY ASA ${fryAsaId}`, ...result };
+    }
+
+    async function executeSetMinBalance(network) {
+      const appId = parseInt(document.getElementById("minbal-app-id").value);
+      const minBalance = document.getElementById("min-balance").value;
+      if (!appId || !minBalance) throw new Error("App ID and min balance are required");
+
+      log("Building set min balance transaction...");
+      const algodClient = getAlgodClient(network);
+      const suggestedParams = await algodClient.getTransactionParams().do();
+
+      // Method selector for admin_set_min_balance(uint64)void
+      const methodSelector = getMethodSelector("admin_set_min_balance(uint64)void");
+      const minBalanceBytes = encodeUint64(minBalance);
+
+      const txn = algosdk.makeApplicationCallTxnFromObject({
+        sender: connectedAddress,
+        suggestedParams,
+        appIndex: appId,
+        appArgs: [methodSelector, minBalanceBytes],
+        onComplete: algosdk.OnApplicationComplete.NoOpOC,
+      });
+
+      const result = await signAndSubmit(txn, network);
+      return { title: "Min Balance Set!", value: `${minBalance} microFRY (${minBalance / 1000000} FRY)`, ...result };
+    }
+
+    async function executeFundContract(network) {
+      const appId = parseInt(document.getElementById("fund-app-id").value);
+      const amount = parseInt(document.getElementById("fund-amount").value);
+      if (!appId || !amount) throw new Error("App ID and amount are required");
+
+      log("Building fund transaction...");
+      const algodClient = getAlgodClient(network);
+      const suggestedParams = await algodClient.getTransactionParams().do();
+
+      const appAddress = algosdk.getApplicationAddress(appId).toString();
+      log(`Contract address: ${appAddress}`);
+
+      const txn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+        sender: connectedAddress,
+        suggestedParams,
+        receiver: appAddress,
+        amount: BigInt(amount),
+      });
+
+      const result = await signAndSubmit(txn, network);
+      return { title: "Contract Funded!", value: `${amount / 1000000} ALGO sent`, ...result };
+    }
+
+    async function executeCreateVote(network) {
+      const appId = parseInt(document.getElementById("vote-app-id").value);
+      const voteName = document.getElementById("vote-name").value;
+      const voteType = parseInt(document.getElementById("vote-type").value);
+      const optionsCount = parseInt(document.getElementById("vote-options").value);
+      const durationDays = parseInt(document.getElementById("vote-duration").value);
+      const lockDuration = parseInt(document.getElementById("vote-lock").value);
+
+      if (!appId || !voteName) throw new Error("App ID and vote name are required");
+      if (optionsCount < 2 || optionsCount > 8) throw new Error("Options must be 2-8");
+
+      log("Building create vote transaction...");
+      const algodClient = getAlgodClient(network);
+      const suggestedParams = await algodClient.getTransactionParams().do();
+
+      const appAddress = algosdk.getApplicationAddress(appId).toString();
+      const voteId = makeVoteId(voteName);
+      const endDate = Math.floor(Date.now() / 1000) + (durationDays * 86400);
+
+      log(`Vote ID: ${Array.from(voteId).map(b => b.toString(16).padStart(2, '0')).join('')}`);
+      log(`End date: ${new Date(endDate * 1000).toISOString()}`);
+
+      // Method selector for create_vote(byte[32],uint8,uint64,uint64,uint8,uint8,pay)void
+      const methodSelector = getMethodSelector("create_vote(byte[32],uint8,uint64,uint64,uint8,uint8,pay)void");
+
+      // Build payment transaction for MBR
+      const payTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+        sender: connectedAddress,
+        suggestedParams,
+        receiver: appAddress,
+        amount: VOTE_BOX_MBR,
+      });
+
+      // Build app call
+      const appTxn = algosdk.makeApplicationCallTxnFromObject({
+        sender: connectedAddress,
+        suggestedParams,
+        appIndex: appId,
+        appArgs: [
+          methodSelector,
+          voteId,                    // vote_id (32 bytes)
+          new Uint8Array([optionsCount]),  // options_count
+          encodeUint64(endDate),     // end_date
+          encodeUint64(lockDuration), // lock_duration
+          new Uint8Array([0]),       // super_majority (0 = false)
+          new Uint8Array([voteType]), // vote_type
+        ],
+        boxes: [{ appIndex: appId, name: new Uint8Array([...VOTE_BOX_PREFIX, ...voteId]) }],
+        onComplete: algosdk.OnApplicationComplete.NoOpOC,
+      });
+
+      // Group transactions
+      algosdk.assignGroupID([payTxn, appTxn]);
+
+      const result = await signAndSubmit([payTxn, appTxn], network);
+      return { title: "Vote Created!", value: `Vote "${voteName}" created`, ...result };
+    }
+
+    async function executeCloseVote(network) {
+      const appId = parseInt(document.getElementById("close-app-id").value);
+      const voteName = document.getElementById("close-vote-name").value;
+      if (!appId || !voteName) throw new Error("App ID and vote name are required");
+
+      log("Building close vote transaction...");
+      const algodClient = getAlgodClient(network);
+      const suggestedParams = await algodClient.getTransactionParams().do();
+
+      const voteId = makeVoteId(voteName);
+
+      // Method selector for admin_close_vote(byte[32])void
+      const methodSelector = getMethodSelector("admin_close_vote(byte[32])void");
+
+      const txn = algosdk.makeApplicationCallTxnFromObject({
+        sender: connectedAddress,
+        suggestedParams,
+        appIndex: appId,
+        appArgs: [methodSelector, voteId],
+        boxes: [{ appIndex: appId, name: new Uint8Array([...VOTE_BOX_PREFIX, ...voteId]) }],
+        onComplete: algosdk.OnApplicationComplete.NoOpOC,
+      });
+
+      const result = await signAndSubmit(txn, network);
+      return { title: "Vote Closed!", value: `Vote "${voteName}" closed`, ...result };
+    }
+
+    async function executeUpdateContract(network) {
+      const appId = parseInt(document.getElementById("update-app-id").value);
+      if (!appId) throw new Error("App ID is required");
+
+      log("Compiling TEAL programs...");
+      const compileRes = await fetch("/api/compile-teal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ network }),
+      });
+
+      if (!compileRes.ok) {
+        const err = await compileRes.json();
+        throw new Error(err.message || "Compilation failed");
+      }
+
+      const { approvalProgram, clearProgram, approvalSize, clearSize } = await compileRes.json();
+      log(`Compiled: approval=${approvalSize} bytes, clear=${clearSize} bytes`);
+
+      const approvalBytes = Uint8Array.from(atob(approvalProgram), c => c.charCodeAt(0));
+      const clearBytes = Uint8Array.from(atob(clearProgram), c => c.charCodeAt(0));
+
+      log("Building update transaction...");
+      const algodClient = getAlgodClient(network);
+      const suggestedParams = await algodClient.getTransactionParams().do();
+
+      const txn = algosdk.makeApplicationUpdateTxnFromObject({
+        sender: connectedAddress,
+        suggestedParams,
+        appIndex: appId,
+        approvalProgram: approvalBytes,
+        clearProgram: clearBytes,
+      });
+
+      const result = await signAndSubmit(txn, network);
+      return { title: "Contract Updated!", value: `App ID ${appId} upgraded`, ...result };
+    }
+
+    // ==========================================================================
+    // Genesis NFT Transaction Builders
+    // ==========================================================================
+
+    async function compileGenesisTeal(network, contract, type) {
+      const res = await fetch("/api/genesis/compile-teal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ network, contract, type }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Genesis TEAL compilation failed");
+      }
+      return await res.json();
+    }
+
+    async function executeGenesisDeployNft(network) {
+      log("Compiling GenesisNFT TEAL...");
+      const [approvalRes, clearRes] = await Promise.all([
+        compileGenesisTeal(network, "GenesisNFT", "approval"),
+        compileGenesisTeal(network, "GenesisNFT", "clear"),
+      ]);
+
+      log(`Compiled: approval=${approvalRes.size} bytes, clear=${clearRes.size} bytes`);
+
+      const approvalBytes = Uint8Array.from(atob(approvalRes.result), c => c.charCodeAt(0));
+      const clearBytes = Uint8Array.from(atob(clearRes.result), c => c.charCodeAt(0));
+
+      log("Building deploy transaction...");
+      const algodClient = getAlgodClient(network);
+      const suggestedParams = await algodClient.getTransactionParams().do();
+
+      // create(address,address,uint64,uint64,uint64,string,uint64)void
+      const methodSelector = getMethodSelector("create(address,address,uint64,uint64,uint64,string,uint64)void");
+
+      const txn = algosdk.makeApplicationCreateTxnFromObject({
+        sender: connectedAddress,
+        suggestedParams,
+        approvalProgram: approvalBytes,
+        clearProgram: clearBytes,
+        numGlobalInts: 6,
+        numGlobalByteSlices: 3,
+        numLocalInts: 0,
+        numLocalByteSlices: 0,
+        extraPages: 3,
+        appArgs: [
+          methodSelector,
+          encodeAddress(genesisConfig.admin),
+          encodeAddress(genesisConfig.treasury),
+          encodeUint64(genesisConfig.mint_price),
+          encodeUint64(genesisConfig.max_supply),
+          encodeUint64(genesisConfig.usdc_asa_id),
+          encodeString(genesisConfig.base_uri),
+          encodeUint64(genesisConfig.royalty_bps),
+        ],
+        onComplete: algosdk.OnApplicationComplete.NoOpOC,
+      });
+
+      const result = await signAndSubmit(txn, network);
+      return { title: "GenesisNFT Deployed!", value: `App ID: ${result.appId}`, ...result };
+    }
+
+    async function executeGenesisDeployRouter(network) {
+      log("Compiling FeeRouter TEAL...");
+      const [approvalRes, clearRes] = await Promise.all([
+        compileGenesisTeal(network, "FeeRouter", "approval"),
+        compileGenesisTeal(network, "FeeRouter", "clear"),
+      ]);
+
+      log(`Compiled: approval=${approvalRes.size} bytes, clear=${clearRes.size} bytes`);
+
+      const approvalBytes = Uint8Array.from(atob(approvalRes.result), c => c.charCodeAt(0));
+      const clearBytes = Uint8Array.from(atob(clearRes.result), c => c.charCodeAt(0));
+
+      log("Building deploy transaction...");
+      const algodClient = getAlgodClient(network);
+      const suggestedParams = await algodClient.getTransactionParams().do();
+
+      // create(address,address,address,uint64)void — use treasury as initial pool (will change later)
+      const methodSelector = getMethodSelector("create(address,address,address,uint64)void");
+
+      const txn = algosdk.makeApplicationCreateTxnFromObject({
+        sender: connectedAddress,
+        suggestedParams,
+        approvalProgram: approvalBytes,
+        clearProgram: clearBytes,
+        numGlobalInts: 3,
+        numGlobalByteSlices: 3,
+        numLocalInts: 0,
+        numLocalByteSlices: 0,
+        extraPages: 3,
+        appArgs: [
+          methodSelector,
+          encodeAddress(genesisConfig.admin),
+          encodeAddress(genesisConfig.treasury),
+          encodeAddress(genesisConfig.treasury), // pool placeholder
+          encodeUint64(genesisConfig.pool_bps),
+        ],
+        onComplete: algosdk.OnApplicationComplete.NoOpOC,
+      });
+
+      const result = await signAndSubmit(txn, network);
+      return { title: "FeeRouter Deployed!", value: `App ID: ${result.appId}`, ...result };
+    }
+
+    async function executeGenesisDeployPool(network) {
+      const nftAppId = parseInt(document.getElementById("genesis-pool-nft-app-id").value);
+      if (!nftAppId) throw new Error("GenesisNFT App ID is required");
+
+      log("Compiling DistributionPool TEAL...");
+      const [approvalRes, clearRes] = await Promise.all([
+        compileGenesisTeal(network, "DistributionPool", "approval"),
+        compileGenesisTeal(network, "DistributionPool", "clear"),
+      ]);
+
+      log(`Compiled: approval=${approvalRes.size} bytes, clear=${clearRes.size} bytes`);
+
+      const approvalBytes = Uint8Array.from(atob(approvalRes.result), c => c.charCodeAt(0));
+      const clearBytes = Uint8Array.from(atob(clearRes.result), c => c.charCodeAt(0));
+
+      log("Building deploy transaction...");
+      const algodClient = getAlgodClient(network);
+      const suggestedParams = await algodClient.getTransactionParams().do();
+
+      // create(uint64,uint64,uint64)void
+      const methodSelector = getMethodSelector("create(uint64,uint64,uint64)void");
+
+      const txn = algosdk.makeApplicationCreateTxnFromObject({
+        sender: connectedAddress,
+        suggestedParams,
+        approvalProgram: approvalBytes,
+        clearProgram: clearBytes,
+        numGlobalInts: 8,
+        numGlobalByteSlices: 2,
+        numLocalInts: 0,
+        numLocalByteSlices: 0,
+        extraPages: 3,
+        appArgs: [
+          methodSelector,
+          encodeUint64(genesisConfig.fry_asa_id),
+          encodeUint64(nftAppId),
+          encodeUint64(genesisConfig.total_supply),
+        ],
+        onComplete: algosdk.OnApplicationComplete.NoOpOC,
+      });
+
+      const result = await signAndSubmit(txn, network);
+      return { title: "DistributionPool Deployed!", value: `App ID: ${result.appId}`, ...result };
+    }
+
+    async function executeGenesisFund(network) {
+      const appId = parseInt(document.getElementById("genesis-fund-app-id").value);
+      const amount = parseInt(document.getElementById("genesis-fund-amount").value);
+      if (!appId || !amount) throw new Error("App ID and amount are required");
+
+      log("Building fund transaction...");
+      const algodClient = getAlgodClient(network);
+      const suggestedParams = await algodClient.getTransactionParams().do();
+
+      const appAddress = algosdk.getApplicationAddress(appId).toString();
+      log(`Contract address: ${appAddress}`);
+
+      const txn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+        sender: connectedAddress,
+        suggestedParams,
+        receiver: appAddress,
+        amount: BigInt(amount),
+      });
+
+      const result = await signAndSubmit(txn, network);
+      return { title: "Contract Funded!", value: `${amount / 1000000} ALGO sent`, ...result };
+    }
+
+    async function executeGenesisOptIn(network) {
+      const appId = parseInt(document.getElementById("genesis-opt-app-id").value);
+      const asaId = parseInt(document.getElementById("genesis-opt-asa-id").value);
+      if (!appId || !asaId) throw new Error("App ID and ASA ID are required");
+
+      log("Building opt-in transaction...");
+      const algodClient = getAlgodClient(network);
+      const suggestedParams = await algodClient.getTransactionParams().do();
+
+      // Extra fee for inner transaction
+      suggestedParams.fee = suggestedParams.minFee * 2n;
+      suggestedParams.flatFee = true;
+
+      // admin_opt_in(uint64)void
+      const methodSelector = getMethodSelector("admin_opt_in(uint64)void");
+
+      const txn = algosdk.makeApplicationCallTxnFromObject({
+        sender: connectedAddress,
+        suggestedParams,
+        appIndex: appId,
+        appArgs: [methodSelector, encodeUint64(asaId)],
+        foreignAssets: [asaId],
+        onComplete: algosdk.OnApplicationComplete.NoOpOC,
+      });
+
+      const result = await signAndSubmit(txn, network);
+      return { title: "Opt-In Successful!", value: `Contract opted into ASA ${asaId}`, ...result };
+    }
+
+    async function executeGenesisSetPool(network) {
+      const routerAppId = parseInt(document.getElementById("genesis-router-app-id").value);
+      const poolAppId = parseInt(document.getElementById("genesis-pool-app-id").value);
+      if (!routerAppId || !poolAppId) throw new Error("Both App IDs are required");
+
+      log("Building set pool transaction...");
+      const algodClient = getAlgodClient(network);
+      const suggestedParams = await algodClient.getTransactionParams().do();
+
+      const poolAddress = algosdk.getApplicationAddress(poolAppId).toString();
+      log(`Pool address: ${poolAddress}`);
+
+      // admin_set_pool(address)void
+      const methodSelector = getMethodSelector("admin_set_pool(address)void");
+
+      const txn = algosdk.makeApplicationCallTxnFromObject({
+        sender: connectedAddress,
+        suggestedParams,
+        appIndex: routerAppId,
+        appArgs: [methodSelector, encodeAddress(poolAddress)],
+        onComplete: algosdk.OnApplicationComplete.NoOpOC,
+      });
+
+      const result = await signAndSubmit(txn, network);
+      return { title: "Pool Set!", value: `FeeRouter now routes to pool ${poolAppId}`, ...result };
+    }
+
+    async function executeGenesisSetPoolBps(network) {
+      const routerAppId = parseInt(document.getElementById("genesis-bps-router-app-id").value);
+      const bpsValue = document.getElementById("genesis-bps-value").value;
+      if (!routerAppId || bpsValue === "") throw new Error("Router App ID and BPS value are required");
+
+      log("Building set pool BPS transaction...");
+      const algodClient = getAlgodClient(network);
+      const suggestedParams = await algodClient.getTransactionParams().do();
+
+      // admin_set_pool_bps(uint64)void
+      const methodSelector = getMethodSelector("admin_set_pool_bps(uint64)void");
+
+      const txn = algosdk.makeApplicationCallTxnFromObject({
+        sender: connectedAddress,
+        suggestedParams,
+        appIndex: routerAppId,
+        appArgs: [methodSelector, encodeUint64(bpsValue)],
+        onComplete: algosdk.OnApplicationComplete.NoOpOC,
+      });
+
+      const result = await signAndSubmit(txn, network);
+      return { title: "Pool BPS Set!", value: `FeeRouter pool_bps = ${bpsValue}`, ...result };
+    }
+
+    async function executeGenesisSetAutomation(network) {
+      const poolAppId = parseInt(document.getElementById("genesis-automation-pool-app-id").value);
+      const automationAddr = document.getElementById("genesis-automation-addr").value;
+      if (!poolAppId || !automationAddr) throw new Error("Pool App ID and Automation Address are required");
+
+      log("Building set automation transaction...");
+      const algodClient = getAlgodClient(network);
+      const suggestedParams = await algodClient.getTransactionParams().do();
+
+      // admin_set_automation(address)void
+      const methodSelector = getMethodSelector("admin_set_automation(address)void");
+
+      const txn = algosdk.makeApplicationCallTxnFromObject({
+        sender: connectedAddress,
+        suggestedParams,
+        appIndex: poolAppId,
+        appArgs: [methodSelector, encodeAddress(automationAddr)],
+        onComplete: algosdk.OnApplicationComplete.NoOpOC,
+      });
+
+      const result = await signAndSubmit(txn, network);
+      return { title: "Automation Set!", value: `DP automation = ${automationAddr.substring(0, 8)}...`, ...result };
+    }
+
+    async function executeGenesisSetNftAppId(network) {
+      const poolAppId = parseInt(document.getElementById("genesis-nftappid-pool-app-id").value);
+      const nftAppId = document.getElementById("genesis-nftappid-value").value;
+      if (!poolAppId || !nftAppId) throw new Error("Pool App ID and NFT App ID are required");
+
+      log("Building set NFT app ID transaction...");
+      const algodClient = getAlgodClient(network);
+      const suggestedParams = await algodClient.getTransactionParams().do();
+
+      // admin_set_nft_app_id(uint64)void
+      const methodSelector = getMethodSelector("admin_set_nft_app_id(uint64)void");
+
+      const txn = algosdk.makeApplicationCallTxnFromObject({
+        sender: connectedAddress,
+        suggestedParams,
+        appIndex: poolAppId,
+        appArgs: [methodSelector, encodeUint64(nftAppId)],
+        onComplete: algosdk.OnApplicationComplete.NoOpOC,
+      });
+
+      const result = await signAndSubmit(txn, network);
+      return { title: "NFT App ID Set!", value: `DP nft_app_id = ${nftAppId}`, ...result };
+    }
+
+    async function executeGenesisSetBaseUri(network) {
+      const appId = parseInt(document.getElementById("genesis-uri-app-id").value);
+      const baseUri = document.getElementById("genesis-base-uri").value;
+      if (!appId || !baseUri) throw new Error("App ID and Base URI are required");
+
+      log("Building set base URI transaction...");
+      const algodClient = getAlgodClient(network);
+      const suggestedParams = await algodClient.getTransactionParams().do();
+
+      // admin_set_base_uri(string)void
+      const methodSelector = getMethodSelector("admin_set_base_uri(string)void");
+
+      const txn = algosdk.makeApplicationCallTxnFromObject({
+        sender: connectedAddress,
+        suggestedParams,
+        appIndex: appId,
+        appArgs: [methodSelector, encodeString(baseUri)],
+        onComplete: algosdk.OnApplicationComplete.NoOpOC,
+      });
+
+      const result = await signAndSubmit(txn, network);
+      return { title: "Base URI Set!", value: baseUri, ...result };
+    }
+
+    async function executeGenesisSetTreasury(network) {
+      const appId = parseInt(document.getElementById("genesis-treasury-app-id").value);
+      const treasuryAddr = document.getElementById("genesis-treasury-addr").value;
+      if (!appId || !treasuryAddr) throw new Error("App ID and Treasury Address are required");
+
+      log("Building set treasury transaction...");
+      const algodClient = getAlgodClient(network);
+      const suggestedParams = await algodClient.getTransactionParams().do();
+
+      // admin_set_treasury(address)void
+      const methodSelector = getMethodSelector("admin_set_treasury(address)void");
+
+      const txn = algosdk.makeApplicationCallTxnFromObject({
+        sender: connectedAddress,
+        suggestedParams,
+        appIndex: appId,
+        appArgs: [methodSelector, encodeAddress(treasuryAddr)],
+        onComplete: algosdk.OnApplicationComplete.NoOpOC,
+      });
+
+      const result = await signAndSubmit(txn, network);
+      return { title: "Treasury Set!", value: `${treasuryAddr.substring(0, 8)}...`, ...result };
+    }
+
+    async function executeGenesisPause(network) {
+      const appId = parseInt(document.getElementById("genesis-pause-app-id").value);
+      const pauseValue = document.querySelector('input[name="genesis-pause-value"]:checked')?.value;
+      if (!appId || pauseValue === undefined) throw new Error("App ID and pause value are required");
+
+      log("Building pause transaction...");
+      const algodClient = getAlgodClient(network);
+      const suggestedParams = await algodClient.getTransactionParams().do();
+
+      // admin_pause(uint64)void
+      const methodSelector = getMethodSelector("admin_pause(uint64)void");
+
+      const txn = algosdk.makeApplicationCallTxnFromObject({
+        sender: connectedAddress,
+        suggestedParams,
+        appIndex: appId,
+        appArgs: [methodSelector, encodeUint64(pauseValue)],
+        onComplete: algosdk.OnApplicationComplete.NoOpOC,
+      });
+
+      const result = await signAndSubmit(txn, network);
+      const action = pauseValue === "1" ? "Paused" : "Unpaused";
+      return { title: `Minting ${action}!`, value: `GenesisNFT ${appId}`, ...result };
+    }
+
+    async function executeGenesisMint(network) {
+      const appId = parseInt(document.getElementById("genesis-mint-app-id").value);
+      if (!appId) throw new Error("GenesisNFT App ID is required");
+
+      log("Building mint transaction group...");
+      const algodClient = getAlgodClient(network);
+      const suggestedParams = await algodClient.getTransactionParams().do();
+
+      const appAddress = algosdk.getApplicationAddress(appId).toString();
+      log(`NFT contract address: ${appAddress}`);
+
+      // 1. USDC payment to contract
+      const payTxn = algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({
+        sender: connectedAddress,
+        suggestedParams,
+        receiver: appAddress,
+        amount: BigInt(genesisConfig.mint_price), // 175 USDC
+        assetIndex: genesisConfig.usdc_asa_id,
+      });
+
+      // 2. App call to mint — extra fee for inner txn (USDC to treasury)
+      const appSuggestedParams = { ...suggestedParams };
+      appSuggestedParams.fee = suggestedParams.minFee * 2n;
+      appSuggestedParams.flatFee = true;
+
+      // mint(axfer)uint64
+      const methodSelector = getMethodSelector("mint(axfer)uint64");
+
+      const appTxn = algosdk.makeApplicationCallTxnFromObject({
+        sender: connectedAddress,
+        suggestedParams: appSuggestedParams,
+        appIndex: appId,
+        appArgs: [methodSelector],
+        foreignAssets: [genesisConfig.usdc_asa_id],
+        onComplete: algosdk.OnApplicationComplete.NoOpOC,
+      });
+
+      // Group transactions
+      algosdk.assignGroupID([payTxn, appTxn]);
+
+      const result = await signAndSubmit([payTxn, appTxn], network);
+      return { title: "NFT Minted!", value: `Paid ${genesisConfig.mint_price / 1000000} USDC`, ...result };
+    }
+
+    async function executeGenesisStartEpoch(network) {
+      const appId = parseInt(document.getElementById("genesis-epoch-app-id").value);
+      if (!appId) throw new Error("Pool App ID is required");
+
+      log("Building start epoch transaction...");
+      const algodClient = getAlgodClient(network);
+      const suggestedParams = await algodClient.getTransactionParams().do();
+
+      // start_epoch()uint64 — uses pool's current FRY balance
+      const methodSelector = getMethodSelector("start_epoch()uint64");
+
+      const txn = algosdk.makeApplicationCallTxnFromObject({
+        sender: connectedAddress,
+        suggestedParams,
+        appIndex: appId,
+        appArgs: [methodSelector],
+        foreignAssets: [genesisConfig.fry_asa_id],
+        onComplete: algosdk.OnApplicationComplete.NoOpOC,
+      });
+
+      const result = await signAndSubmit(txn, network);
+      return { title: "Epoch Started!", value: `Pool ${appId} epoch started (uses pool FRY balance)`, ...result };
+    }
+
+    async function executeGenesisClaim(network) {
+      const poolAppId = parseInt(document.getElementById("genesis-claim-pool-id").value);
+      const nftAppId = parseInt(document.getElementById("genesis-claim-nft-id").value);
+      const tokenId = document.getElementById("genesis-claim-token-id").value;
+      const epoch = document.getElementById("genesis-claim-epoch").value;
+      if (!poolAppId || !nftAppId || !tokenId || !epoch) throw new Error("All fields are required");
+
+      log("Building claim transaction...");
+      const algodClient = getAlgodClient(network);
+      const suggestedParams = await algodClient.getTransactionParams().do();
+
+      // 3x fee for 2 inner txns (ownerOf call + FRY transfer)
+      suggestedParams.fee = suggestedParams.minFee * 3n;
+      suggestedParams.flatFee = true;
+
+      // claim(uint64)uint64
+      const methodSelector = getMethodSelector("claim(uint64)uint64");
+
+      // Box names: claim box = "c" + epoch(8BE) + tokenId(8BE), owner box = "o" + tokenId(8BE)
+      const claimBoxName = new Uint8Array([0x63, ...encodeUint64(epoch), ...encodeUint64(tokenId)]);
+      const ownerBoxName = new Uint8Array([0x6f, ...encodeUint64(tokenId)]);
+
+      const txn = algosdk.makeApplicationCallTxnFromObject({
+        sender: connectedAddress,
+        suggestedParams,
+        appIndex: poolAppId,
+        appArgs: [methodSelector, encodeUint64(tokenId)],
+        foreignApps: [nftAppId],
+        foreignAssets: [genesisConfig.fry_asa_id],
+        boxes: [
+          { appIndex: 0, name: claimBoxName },
+          { appIndex: nftAppId, name: ownerBoxName }
+        ],
+        onComplete: algosdk.OnApplicationComplete.NoOpOC,
+      });
+
+      const result = await signAndSubmit(txn, network);
+      return { title: "Rewards Claimed!", value: `Token #${tokenId} epoch ${epoch}`, ...result };
+    }
+
+    async function executeGenesisEmergencyFry(network) {
+      const appId = parseInt(document.getElementById("genesis-emergency-app-id").value);
+      const amount = document.getElementById("genesis-emergency-amount").value;
+      const receiver = document.getElementById("genesis-emergency-receiver").value;
+      if (!appId || !amount || !receiver) throw new Error("All fields are required");
+
+      log("Building emergency withdraw transaction...");
+      const algodClient = getAlgodClient(network);
+      const suggestedParams = await algodClient.getTransactionParams().do();
+
+      // Extra fee for inner txn
+      suggestedParams.fee = suggestedParams.minFee * 2n;
+      suggestedParams.flatFee = true;
+
+      // admin_emergency_withdraw_fry(uint64,address)void
+      const methodSelector = getMethodSelector("admin_emergency_withdraw_fry(uint64,address)void");
+
+      const txn = algosdk.makeApplicationCallTxnFromObject({
+        sender: connectedAddress,
+        suggestedParams,
+        appIndex: appId,
+        appArgs: [methodSelector, encodeUint64(amount), encodeAddress(receiver)],
+        foreignAssets: [genesisConfig.fry_asa_id],
+        onComplete: algosdk.OnApplicationComplete.NoOpOC,
+      });
+
+      const result = await signAndSubmit(txn, network);
+      return { title: "Emergency Withdraw!", value: `${amount} microFRY to ${receiver.substring(0, 8)}...`, ...result };
+    }
+
+    async function executeV1DpRecovery(network) {
+      log("Building V1 DP recovery transactions...");
+      const algodClient = getAlgodClient(network);
+      const suggestedParams = await algodClient.getTransactionParams().do();
+
+      const V1_DP_APP = 3547212093;
+      const appAddr = algosdk.getApplicationAddress(V1_DP_APP).toString();
+
+      // Query current FRY balance of V1 DP
+      const acctInfo = await algodClient.accountInformation(appAddr).do();
+      const assets = acctInfo.assets || [];
+      const fryAsaId = genesisConfig.fry_asa_id;
+      const fryAsset = assets.find(a => Number(a["asset-id"] ?? a.assetId) === Number(fryAsaId));
+      const fryBalance = fryAsset ? BigInt(fryAsset.amount) : 0n;
+      if (fryBalance === 0n) throw new Error("V1 DP has no FRY to withdraw (already recovered?)");
+      log(`V1 DP FRY balance: ${fryBalance} microFRY`);
+
+      const txns = [];
+
+      // Txn 1: cancel_epoch()void
+      const cancelSelector = getMethodSelector("cancel_epoch()void");
+      txns.push(algosdk.makeApplicationCallTxnFromObject({
+        sender: connectedAddress,
+        suggestedParams,
+        appIndex: V1_DP_APP,
+        appArgs: [cancelSelector],
+        onComplete: algosdk.OnApplicationComplete.NoOpOC,
+      }));
+      log("Added: cancel_epoch()");
+
+      // Txn 2: admin_emergency_withdraw_fry(uint64,address)void
+      // Extra fee for inner AssetTransfer (fee=0 in contract, pooled from outer)
+      suggestedParams.fee = suggestedParams.minFee * 2n;
+      suggestedParams.flatFee = true;
+      const withdrawSelector = getMethodSelector("admin_emergency_withdraw_fry(uint64,address)void");
+      txns.push(algosdk.makeApplicationCallTxnFromObject({
+        sender: connectedAddress,
+        suggestedParams,
+        appIndex: V1_DP_APP,
+        appArgs: [withdrawSelector, encodeUint64(fryBalance), encodeAddress(connectedAddress)],
+        foreignAssets: [genesisConfig.fry_asa_id],
+        onComplete: algosdk.OnApplicationComplete.NoOpOC,
+      }));
+      log(`Added: admin_emergency_withdraw_fry(${fryBalance}, ${connectedAddress.substring(0, 8)}...)`);
+
+      // Atomic group
+      algosdk.assignGroupID(txns);
+
+      const result = await signAndSubmit(txns, network);
+      return { title: "V1 DP Recovery Complete!", value: `Withdrew ${fryBalance} microFRY`, ...result };
+    }
+
+    // ==========================================================================
+    // FryMarket Helpers + Builders
+    // ==========================================================================
+
+    async function compileFryMarketTeal(network, contract, type) {
+      const res = await fetch("/api/frymarket/compile-teal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ network, contract, type }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "FryMarket TEAL compilation failed");
+      }
+      return await res.json();
+    }
+
+    async function executeDeployFryMarket(network) {
+      log("Compiling FryMarket approval TEAL...");
+      const approvalResult = await compileFryMarketTeal(network, "fry_market", "approval");
+      log("Compiling FryMarket clear TEAL...");
+      const clearResult = await compileFryMarketTeal(network, "fry_market", "clear");
+
+      const approvalBytes = new Uint8Array(atob(approvalResult.result).split("").map(c => c.charCodeAt(0)));
+      const clearBytes = new Uint8Array(atob(clearResult.result).split("").map(c => c.charCodeAt(0)));
+
+      const extraPages = Math.max(0, Math.ceil(approvalBytes.length / 2048) - 1);
+      log(`FryMarket approval: ${approvalBytes.length} bytes, extraPages: ${extraPages}`);
+
+      const methodSelector = new Uint8Array(
+        await crypto.subtle.digest("SHA-256", new TextEncoder().encode("create(uint64,uint64,uint64)void"))
+      ).slice(0, 4);
+
+      const fryId = BigInt(frymarketConfig.fryId);
+      const primaryFee = BigInt(frymarketConfig.primaryFee);
+      const secondaryFee = BigInt(frymarketConfig.secondaryFee);
+
+      const enc = new algosdk.ABIUintType(64);
+      const appArgs = [
+        methodSelector,
+        enc.encode(fryId),
+        enc.encode(primaryFee),
+        enc.encode(secondaryFee),
+      ];
+
+      const suggestedParams = await algodClient.getTransactionParams().do();
+      const txn = algosdk.makeApplicationCreateTxnFromObject({
+        sender: address,
+        approvalProgram: approvalBytes,
+        clearProgram: clearBytes,
+        numGlobalInts: 3,
+        numGlobalByteSlices: 1,
+        numLocalInts: 0,
+        numLocalByteSlices: 0,
+        onComplete: algosdk.OnApplicationComplete.NoOpOC,
+        appArgs: appArgs,
+        extraPages: extraPages,
+        suggestedParams: suggestedParams,
+      });
+
+      log("Requesting Pera signature for FryMarket deploy...");
+      return await signAndSubmit([txn]);
+    }
+
+    async function executeDeployFryAuction(network) {
+      log("Compiling FryAuction approval TEAL...");
+      const approvalResult = await compileFryMarketTeal(network, "fry_auction", "approval");
+      log("Compiling FryAuction clear TEAL...");
+      const clearResult = await compileFryMarketTeal(network, "fry_auction", "clear");
+
+      const approvalBytes = new Uint8Array(atob(approvalResult.result).split("").map(c => c.charCodeAt(0)));
+      const clearBytes = new Uint8Array(atob(clearResult.result).split("").map(c => c.charCodeAt(0)));
+
+      const extraPages = Math.max(0, Math.ceil(approvalBytes.length / 2048) - 1);
+      log(`FryAuction approval: ${approvalBytes.length} bytes, extraPages: ${extraPages}`);
+
+      const methodSelector = new Uint8Array(
+        await crypto.subtle.digest("SHA-256", new TextEncoder().encode("create(uint64,uint64,uint64)void"))
+      ).slice(0, 4);
+
+      const fryId = BigInt(frymarketConfig.fryId);
+      const primaryFee = BigInt(frymarketConfig.primaryFee);
+      const secondaryFee = BigInt(frymarketConfig.secondaryFee);
+
+      const enc = new algosdk.ABIUintType(64);
+      const appArgs = [
+        methodSelector,
+        enc.encode(fryId),
+        enc.encode(primaryFee),
+        enc.encode(secondaryFee),
+      ];
+
+      const suggestedParams = await algodClient.getTransactionParams().do();
+      const txn = algosdk.makeApplicationCreateTxnFromObject({
+        sender: address,
+        approvalProgram: approvalBytes,
+        clearProgram: clearBytes,
+        numGlobalInts: 3,
+        numGlobalByteSlices: 1,
+        numLocalInts: 0,
+        numLocalByteSlices: 0,
+        onComplete: algosdk.OnApplicationComplete.NoOpOC,
+        appArgs: appArgs,
+        extraPages: extraPages,
+        suggestedParams: suggestedParams,
+      });
+
+      log("Requesting Pera signature for FryAuction deploy...");
+      return await signAndSubmit([txn]);
+    }
+
+    async function executeFryMarketFund(network) {
+      const appId = parseInt(document.getElementById("frymarket-fund-app-id").value);
+      const amount = BigInt(document.getElementById("frymarket-fund-amount").value || "1000000");
+      if (!appId) throw new Error("FryMarket App ID is required");
+
+      const appAddr = algosdk.getApplicationAddress(appId);
+      log(`Funding FryMarket app ${appId} (${appAddr}) with ${amount} microAlgos...`);
+
+      const suggestedParams = await algodClient.getTransactionParams().do();
+      const txn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+        sender: address,
+        receiver: appAddr,
+        amount: amount,
+        suggestedParams: suggestedParams,
+      });
+
+      log("Requesting Pera signature for FryMarket fund...");
+      return await signAndSubmit([txn]);
+    }
+
+    async function executeFryAuctionFund(network) {
+      const appId = parseInt(document.getElementById("fryauction-fund-app-id").value);
+      const amount = BigInt(document.getElementById("fryauction-fund-amount").value || "1000000");
+      if (!appId) throw new Error("FryAuction App ID is required");
+
+      const appAddr = algosdk.getApplicationAddress(appId);
+      log(`Funding FryAuction app ${appId} (${appAddr}) with ${amount} microAlgos...`);
+
+      const suggestedParams = await algodClient.getTransactionParams().do();
+      const txn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+        sender: address,
+        receiver: appAddr,
+        amount: amount,
+        suggestedParams: suggestedParams,
+      });
+
+      log("Requesting Pera signature for FryAuction fund...");
+      return await signAndSubmit([txn]);
+    }
+
+    async function executeFryMarketAssetOptIn(network) {
+      const appId = parseInt(document.getElementById("frymarket-optin-app-id").value);
+      if (!appId) throw new Error("FryMarket App ID is required");
+
+      const fryId = frymarketConfig.fryId;
+      log(`FryMarket app ${appId}: opt-in to FRY ASA ${fryId} (inner txn)...`);
+
+      const methodSelector = new Uint8Array(
+        await crypto.subtle.digest("SHA-256", new TextEncoder().encode("asset_opt_in(uint64)void"))
+      ).slice(0, 4);
+
+      const enc = new algosdk.ABIUintType(64);
+      const appArgs = [methodSelector, enc.encode(BigInt(fryId))];
+
+      const suggestedParams = await algodClient.getTransactionParams().do();
+      suggestedParams.fee = suggestedParams.minFee * 2n;
+      suggestedParams.flatFee = true;
+
+      const txn = algosdk.makeApplicationCallTxnFromObject({
+        sender: address,
+        appIndex: appId,
+        onComplete: algosdk.OnApplicationComplete.NoOpOC,
+        appArgs: appArgs,
+        foreignAssets: [fryId],
+        suggestedParams: suggestedParams,
+      });
+
+      log("Requesting Pera signature for FryMarket asset opt-in...");
+      return await signAndSubmit([txn]);
+    }
+
+    async function executeFryAuctionAssetOptIn(network) {
+      const appId = parseInt(document.getElementById("fryauction-optin-app-id").value);
+      if (!appId) throw new Error("FryAuction App ID is required");
+
+      const fryId = frymarketConfig.fryId;
+      log(`FryAuction app ${appId}: opt-in to FRY ASA ${fryId} (inner txn)...`);
+
+      const methodSelector = new Uint8Array(
+        await crypto.subtle.digest("SHA-256", new TextEncoder().encode("asset_opt_in(uint64)void"))
+      ).slice(0, 4);
+
+      const enc = new algosdk.ABIUintType(64);
+      const appArgs = [methodSelector, enc.encode(BigInt(fryId))];
+
+      const suggestedParams = await algodClient.getTransactionParams().do();
+      suggestedParams.fee = suggestedParams.minFee * 2n;
+      suggestedParams.flatFee = true;
+
+      const txn = algosdk.makeApplicationCallTxnFromObject({
+        sender: address,
+        appIndex: appId,
+        onComplete: algosdk.OnApplicationComplete.NoOpOC,
+        appArgs: appArgs,
+        foreignAssets: [fryId],
+        suggestedParams: suggestedParams,
+      });
+
+      log("Requesting Pera signature for FryAuction asset opt-in...");
+      return await signAndSubmit([txn]);
+    }
+
+    // ==========================================================================
+    // FryMinerRewardPool Operations
+    // ==========================================================================
+
+    async function executeSetFeeAddress(network) {
+      const appId = parseInt(document.getElementById("set-fee-app-id").value);
+      const newFeeAddress = document.getElementById("set-fee-address-input").value.trim();
+      if (!appId) throw new Error("App ID is required");
+      if (!newFeeAddress) throw new Error("New fee address is required");
+
+      log("Building set_fee_address transaction...");
+      const algodClient = getAlgodClient(network);
+      const suggestedParams = await algodClient.getTransactionParams().do();
+
+      const methodSelector = getMethodSelector("set_fee_address(address)void");
+
+      const txn = algosdk.makeApplicationCallTxnFromObject({
+        sender: connectedAddress,
+        suggestedParams,
+        appIndex: appId,
+        appArgs: [methodSelector, encodeAddress(newFeeAddress)],
+        onComplete: algosdk.OnApplicationComplete.NoOpOC,
+      });
+
+      const result = await signAndSubmit(txn, network);
+      return { title: "Fee Address Updated!", value: `Pool ${appId} fee: ${newFeeAddress.substring(0, 8)}...`, ...result };
+    }
+
+    // ==========================================================================
+    // Execute Operation
+    // ==========================================================================
+
+    async function executeOperation() {
+      hideError();
+      resultSectionEl.classList.add("hidden");
+      executeBtn.disabled = true;
+
+      const operation = operationSelectEl.value;
+      const network = getSelectedNetwork();
+      log(`Executing ${operation} on ${network}...`);
+
+      try {
+        let result;
+
+        switch (operation) {
+          case "deploy":
+            result = await executeDeploy(network);
+            break;
+          case "create-fry-asa":
+            result = await executeCreateFryAsa(network);
+            break;
+          case "opt-in-fry":
+            result = await executeOptInFry(network);
+            break;
+          case "set-min-balance":
+            result = await executeSetMinBalance(network);
+            break;
+          case "fund-contract":
+            result = await executeFundContract(network);
+            break;
+          case "create-vote":
+            result = await executeCreateVote(network);
+            break;
+          case "close-vote":
+            result = await executeCloseVote(network);
+            break;
+          case "update-contract":
+            result = await executeUpdateContract(network);
+            break;
+          // Genesis NFT operations
+          case "genesis-deploy-nft":
+            result = await executeGenesisDeployNft(network);
+            break;
+          case "genesis-deploy-router":
+            result = await executeGenesisDeployRouter(network);
+            break;
+          case "genesis-deploy-pool":
+            result = await executeGenesisDeployPool(network);
+            break;
+          case "genesis-fund":
+            result = await executeGenesisFund(network);
+            break;
+          case "genesis-opt-in":
+            result = await executeGenesisOptIn(network);
+            break;
+          case "genesis-set-pool":
+            result = await executeGenesisSetPool(network);
+            break;
+          case "genesis-set-pool-bps":
+            result = await executeGenesisSetPoolBps(network);
+            break;
+          case "genesis-set-automation":
+            result = await executeGenesisSetAutomation(network);
+            break;
+          case "genesis-set-nft-app-id":
+            result = await executeGenesisSetNftAppId(network);
+            break;
+          case "genesis-set-base-uri":
+            result = await executeGenesisSetBaseUri(network);
+            break;
+          case "genesis-set-treasury":
+            result = await executeGenesisSetTreasury(network);
+            break;
+          case "genesis-pause":
+            result = await executeGenesisPause(network);
+            break;
+          case "genesis-mint":
+            result = await executeGenesisMint(network);
+            break;
+          case "genesis-start-epoch":
+            result = await executeGenesisStartEpoch(network);
+            break;
+          case "genesis-claim":
+            result = await executeGenesisClaim(network);
+            break;
+          case "genesis-emergency-fry":
+            result = await executeGenesisEmergencyFry(network);
+            break;
+          case "v1-dp-recovery":
+            result = await executeV1DpRecovery(network);
+            break;
+          case "deploy-fry-market":
+            result = await executeDeployFryMarket(network);
+            break;
+          case "deploy-fry-auction":
+            result = await executeDeployFryAuction(network);
+            break;
+          case "frymarket-fund":
+            result = await executeFryMarketFund(network);
+            break;
+          case "fryauction-fund":
+            result = await executeFryAuctionFund(network);
+            break;
+          case "frymarket-admin-optin-fry":
+            result = await executeFryMarketAssetOptIn(network);
+            break;
+          case "fryauction-admin-optin-fry":
+            result = await executeFryAuctionAssetOptIn(network);
+            break;
+          case "set-fee-address":
+            result = await executeSetFeeAddress(network);
+            break;
+          default:
+            throw new Error(`Unknown operation: ${operation}`);
+        }
+
+        log(`SUCCESS: ${result.title}`, "success");
+        resultTitleEl.textContent = result.title;
+        resultValueEl.textContent = result.value;
+        resultTxidEl.textContent = result.txId;
+        resultRoundEl.textContent = result.confirmedRound;
+        resultSectionEl.classList.remove("hidden");
+
+      } catch (err) {
+        if (err.message.includes("rejected") || err.message.includes("cancelled") || err.message.includes("closed")) {
+          showError("Transaction was rejected or cancelled by user");
+        } else {
+          showError(err.message);
+        }
+      } finally {
+        executeBtn.disabled = false;
+      }
+    }
+
+    // ==========================================================================
+    // Event Listeners
+    // ==========================================================================
+
+    connectBtn.addEventListener("click", connectWallet);
+    disconnectBtn.addEventListener("click", disconnectWallet);
+    executeBtn.addEventListener("click", executeOperation);
+    operationSelectEl.addEventListener("change", updateOperationUI);
+
+    // Auto-disconnect when network changes while connected
+    document.querySelectorAll('input[name="network"]').forEach(radio => {
+      radio.addEventListener("change", handleNetworkChange);
+    });
+
+    // ==========================================================================
+    // Initialize
+    // ==========================================================================
+
+    async function init() {
+      // Clear stale WalletConnect sessions to prevent "Missing or invalid topic" errors
+      clearWalletConnectSessions();
+      await fetchConfig();
+      await fetchAbi();
+      await fetchGenesisConfig();
+      await fetchFryMarketConfig();
+      updateOperationUI();
+      await batchInit();
+    }
+
+    // ======================================================================
+    // BATCH PLAN EXECUTION (ported from call-batch.html)
+    // Activated only when ?src= URL parameter is present.
+    // All functions prefixed "batch" to avoid collisions with existing code.
+    // ======================================================================
+
+    var batchMode = false;
+    var batchPlan = null;
+    var batchAbiMethods = null;
+    var batchVerificationPassed = false;
+    var batchHashVerified = false;
+
+    // --- Batch Utilities ---
+
+    function batchHexToBytes(hex) {
+      if (hex.startsWith("hex:")) hex = hex.slice(4);
+      hex = hex.replace(/^0x/, "");
+      if (hex.length % 2 !== 0) throw new Error("Invalid hex length");
+      var bytes = new Uint8Array(hex.length / 2);
+      for (var i = 0; i < hex.length; i += 2) bytes[i / 2] = parseInt(hex.substr(i, 2), 16);
+      return bytes;
+    }
+
+    async function batchSha256Bytes(data) {
+      return new Uint8Array(await crypto.subtle.digest("SHA-256", data));
+    }
+
+    async function batchComputePlanHash(rawText) {
+      var buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(rawText));
+      return Array.from(new Uint8Array(buf)).map(function(b) { return b.toString(16).padStart(2, "0"); }).join("");
+    }
+
+    // --- Batch ABI Encoding ---
+
+    function batchEncodeAbiArg(value, type, groupTxns, txnIndex) {
+      if (type === "uint8") return new Uint8Array([Number(value) & 0xff]);
+      if (type === "uint16") { var v = Number(value); return new Uint8Array([(v >> 8) & 0xff, v & 0xff]); }
+      if (type === "uint32") { var v2 = Number(value); return new Uint8Array([(v2 >> 24) & 0xff, (v2 >> 16) & 0xff, (v2 >> 8) & 0xff, v2 & 0xff]); }
+      if (type === "uint64") return encodeUint64(value);
+      if (type.startsWith("byte[") || type === "byte") {
+        if (typeof value === "string" && value.startsWith("hex:")) return batchHexToBytes(value);
+        if (typeof value === "string") {
+          try { var bin = atob(value); var bytes = new Uint8Array(bin.length); for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i); return bytes; }
+          catch (e) { return new TextEncoder().encode(value); }
+        }
+        if (value instanceof Uint8Array) return value;
+        throw new Error("Unsupported bytes value");
+      }
+      if (type === "address") {
+        var addr = (typeof value === "string" && value.startsWith("addr:")) ? value.slice(5) : value;
+        return algosdk.decodeAddress(addr).publicKey;
+      }
+      if (["pay", "axfer", "appl", "acfg", "afrz"].indexOf(type) >= 0) {
+        for (var k = 0; k < groupTxns.length; k++) {
+          if (k < txnIndex && groupTxns[k].type === type) return new Uint8Array([k]);
+        }
+        throw new Error("No " + type + " txn found before index " + txnIndex);
+      }
+      if (type === "bool") return new Uint8Array([value ? 1 : 0]);
+      throw new Error("Unsupported ABI type: " + type);
+    }
+
+    // --- Batch Transaction Building ---
+
+    function batchBuildAppArgs(methodName, planArgs, groupTxns, txnIndex, abiMethod) {
+      var argTypes = (abiMethod.args || []).map(function(a) { return a.type; }).join(",");
+      var retType = (abiMethod.returns && abiMethod.returns.type !== "void") ? abiMethod.returns.type : "void";
+      var sig = abiMethod.name + "(" + argTypes + ")" + retType;
+      var selectorBytes = getMethodSelector(sig);
+      var match = sig.match(/\((.*)\)/);
+      if (!match) throw new Error("Bad method signature: " + sig);
+      var typeList = match[1].split(",").filter(function(t) { return t.trim(); });
+      var encodedArgs = [];
+      var argIdx = 0;
+      for (var i = 0; i < typeList.length; i++) {
+        var t = typeList[i].trim();
+        if (["pay", "axfer", "appl", "acfg", "afrz"].indexOf(t) >= 0) {
+          encodedArgs.push(batchEncodeAbiArg(null, t, groupTxns, txnIndex));
+        } else {
+          if (argIdx >= (planArgs || []).length) throw new Error("Missing arg " + argIdx + " for " + sig);
+          encodedArgs.push(batchEncodeAbiArg(planArgs[argIdx], t, groupTxns, txnIndex));
+          argIdx++;
+        }
+      }
+      return [selectorBytes].concat(encodedArgs);
+    }
+
+    function batchBuildNonApplTxn(planTxn, sp, senderAddr) {
+      if (planTxn.type === "pay") {
+        return algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+          sender: senderAddr, receiver: planTxn.to, amount: BigInt(planTxn.amount),
+          note: planTxn.note ? new TextEncoder().encode(planTxn.note) : undefined, suggestedParams: sp
+        });
+      }
+      if (planTxn.type === "axfer") {
+        return algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({
+          sender: senderAddr, receiver: planTxn.to, assetIndex: Number(planTxn.assetId),
+          amount: BigInt(planTxn.amount), suggestedParams: sp
+        });
+      }
+      throw new Error("Unknown txn type: " + planTxn.type);
+    }
+
+    function batchBuildGroup(group, sp, appId, senderAddr) {
+      var raw = group.txns.map(function(pt, i) {
+        if (pt.type === "appl") {
+          var abiMethod = batchAbiMethods.get(pt.method);
+          if (!abiMethod) throw new Error("Unknown method: " + pt.method);
+          return { __isAppl: true, planTxn: pt, abiMethod: abiMethod, sender: senderAddr, appId: appId, sp: sp, index: i };
+        }
+        return batchBuildNonApplTxn(pt, sp, senderAddr);
+      });
+      var txns = raw.map(function(item, i) {
+        if (item.__isAppl) {
+          var appArgs = batchBuildAppArgs(item.planTxn.method, item.planTxn.args, group.txns, i, item.abiMethod);
+          var boxes = (item.planTxn.boxes || []).map(function(b) {
+            var name;
+            if (typeof b === "string" && b.startsWith("hex:")) name = batchHexToBytes(b);
+            else if (typeof b === "string") name = new TextEncoder().encode(b);
+            else if (b && typeof b.name === "string" && b.name.startsWith("hex:")) name = batchHexToBytes(b.name);
+            else if (b && b.name instanceof Uint8Array) name = b.name;
+            else if (b && typeof b.name === "string") name = new TextEncoder().encode(b.name);
+            else throw new Error("Bad box name");
+            var appIndex = (b && b.appIndex != null) ? Number(b.appIndex) : Number(appId);
+            return { appIndex: appIndex, name: name };
+          });
+          return algosdk.makeApplicationNoOpTxnFromObject({
+            sender: item.sender, appIndex: Number(item.appId), appArgs: appArgs,
+            suggestedParams: item.sp, boxes: boxes
+          });
+        }
+        return item;
+      });
+      algosdk.assignGroupID(txns);
+      return txns;
+    }
+
+    // --- Batch Verification Gates ---
+
+    function batchVerifyAddresses(p) {
+      var allAddrs = new Set();
+      allAddrs.add(p.sender);
+      for (var gi = 0; gi < p.groups.length; gi++) {
+        var g = p.groups[gi];
+        for (var ti = 0; ti < g.txns.length; ti++) {
+          var t = g.txns[ti];
+          if (t.to) allAddrs.add(t.to);
+          for (var ai = 0; ai < (t.args || []).length; ai++) {
+            var a = t.args[ai];
+            if (typeof a === "string" && a.length === 58 && !a.startsWith("hex:")) allAddrs.add(a);
+          }
+        }
+      }
+      var failures = [];
+      allAddrs.forEach(function(addr) { try { algosdk.decodeAddress(addr); } catch (e) { failures.push(addr); } });
+      return { label: "Address decode check", passed: failures.length === 0, detail: failures.length ? "Failed: " + failures.join(", ") : "All " + allAddrs.size + " addresses valid" };
+    }
+
+    function batchVerifyFryAmounts(p) {
+      var importSum = 0, axferAmount = null;
+      for (var gi = 0; gi < p.groups.length; gi++) {
+        var g = p.groups[gi];
+        for (var ti = 0; ti < g.txns.length; ti++) {
+          var t = g.txns[ti];
+          if (t.type === "appl" && t.method === "admin_import_stake") importSum += Number(t.args[3] || 0);
+          if (t.type === "axfer") axferAmount = Number(t.amount);
+        }
+      }
+      if (axferAmount == null) return { label: "FRY amount consistency", passed: false, detail: "No FRY axfer found" };
+      var pass = importSum === axferAmount;
+      return { label: "FRY amount consistency", passed: pass, detail: "Import sum=" + importSum + " Axfer amount=" + axferAmount + (pass ? " MATCH" : " MISMATCH") };
+    }
+
+    async function batchVerifyStakeBoxKeys(p) {
+      var rows = [], allPass = true;
+      for (var gi = 0; gi < p.groups.length; gi++) {
+        var g = p.groups[gi];
+        for (var ti = 0; ti < g.txns.length; ti++) {
+          var t = g.txns[ti];
+          if (t.type === "appl" && t.method === "admin_import_stake") {
+            var voteIdHex = (t.args[0] || "").replace(/^hex:/, "");
+            var voterAddr = t.args[1];
+            var expectedStakeKey = (t.boxes || [])[1];
+            if (!voteIdHex || !voterAddr || !expectedStakeKey) { allPass = false; rows.push({ passed: false }); continue; }
+            try {
+              var voteBytes = batchHexToBytes("hex:" + voteIdHex);
+              var voterPk = algosdk.decodeAddress(voterAddr).publicKey;
+              var combined = new Uint8Array(voteBytes.length + voterPk.length);
+              combined.set(voteBytes, 0); combined.set(voterPk, voteBytes.length);
+              var h = await batchSha256Bytes(combined);
+              var recomputed = "hex:73" + Array.from(h).map(function(b) { return b.toString(16).padStart(2, "0"); }).join("");
+              var pass = recomputed.toLowerCase() === expectedStakeKey.toLowerCase();
+              if (!pass) allPass = false;
+              rows.push({ passed: pass });
+            } catch (e) { allPass = false; rows.push({ passed: false }); }
+          }
+        }
+      }
+      if (rows.length === 0) return { label: "Stake box key check", passed: true, detail: "No import stakes in plan" };
+      var failCount = rows.filter(function(r) { return !r.passed; }).length;
+      return { label: "Stake box key check", passed: allPass, detail: rows.length + " imports \u2014 " + (rows.length - failCount) + " PASS, " + failCount + " FAIL" };
+    }
+
+    async function batchVerifyVoteBoxKeys(p) {
+      var allPass = true, count = 0;
+      for (var gi = 0; gi < p.groups.length; gi++) {
+        var g = p.groups[gi];
+        for (var ti = 0; ti < g.txns.length; ti++) {
+          var t = g.txns[ti];
+          if (t.type === "appl" && (t.method === "create_vote" || t.method === "admin_import_stake")) {
+            var voteIdHex = (t.args[0] || "").replace(/^hex:/, "");
+            var expectedVoteKey = (t.boxes || [])[0];
+            if (!voteIdHex || !expectedVoteKey) continue;
+            count++;
+            if (("hex:76" + voteIdHex).toLowerCase() !== expectedVoteKey.toLowerCase()) allPass = false;
+          }
+        }
+      }
+      return { label: "Vote box key check", passed: allPass, detail: count + " vote box references checked" };
+    }
+
+    async function batchRunVerification(p) {
+      var panel = document.getElementById("batch-verify-panel");
+      while (panel.firstChild) panel.removeChild(panel.firstChild);
+      var results = [batchVerifyAddresses(p), batchVerifyFryAmounts(p), await batchVerifyStakeBoxKeys(p), await batchVerifyVoteBoxKeys(p)];
+      var allPass = true;
+      for (var i = 0; i < results.length; i++) {
+        var r = results[i];
+        if (!r.passed) allPass = false;
+        var row = document.createElement("div"); row.style.marginBottom = "0.5rem";
+        var badge = document.createElement("span");
+        badge.className = "badge " + (r.passed ? "badge-confirmed" : "badge-error");
+        badge.textContent = r.passed ? "PASS" : "FAIL";
+        row.appendChild(badge);
+        row.appendChild(document.createTextNode("  " + r.label + " \u2014 " + r.detail));
+        panel.appendChild(row);
+      }
+      batchVerificationPassed = allPass;
+      batchUpdateExecuteButton();
+    }
+
+    // --- Batch Plan Rendering ---
+
+    function batchRenderHash(hash) {
+      document.getElementById("batch-hash-value").textContent = hash;
+      var statusEl = document.getElementById("batch-hash-status");
+      while (statusEl.firstChild) statusEl.removeChild(statusEl.firstChild);
+      var badge = document.createElement("span");
+      badge.className = "badge badge-pending"; badge.textContent = "INFO";
+      statusEl.appendChild(badge);
+      statusEl.appendChild(document.createTextNode(" Hash recorded"));
+      batchHashVerified = true;
+      batchUpdateExecuteButton();
+    }
+
+    function batchRenderGroups() {
+      if (!batchPlan) return;
+      document.getElementById("batch-summary-appid").textContent = batchPlan.appId;
+      document.getElementById("batch-summary-sender").textContent = batchPlan.sender;
+      document.getElementById("batch-summary-network").textContent = batchPlan.network || "mainnet";
+      document.getElementById("batch-summary-groups").textContent = batchPlan.groups.length;
+      var tbody = document.getElementById("batch-groups-body");
+      while (tbody.firstChild) tbody.removeChild(tbody.firstChild);
+      batchPlan.groups.forEach(function(g, i) {
+        var tr = document.createElement("tr");
+        var td1 = document.createElement("td"); td1.textContent = String(i + 1);
+        var td2 = document.createElement("td"); td2.textContent = g.description || ("Group " + (i + 1));
+        var td3 = document.createElement("td"); td3.textContent = String((g.txns || []).length);
+        var td4 = document.createElement("td"); td4.id = "batch-status-" + i;
+        var badge = document.createElement("span"); badge.className = "badge badge-pending"; badge.textContent = "Pending";
+        td4.appendChild(badge);
+        tr.appendChild(td1); tr.appendChild(td2); tr.appendChild(td3); tr.appendChild(td4);
+        tbody.appendChild(tr);
+      });
+    }
+
+    function batchRenderPreview(p) {
+      var container = document.getElementById("batch-preview-container");
+      while (container.firstChild) container.removeChild(container.firstChild);
+      for (var gi = 0; gi < p.groups.length; gi++) {
+        var g = p.groups[gi];
+        var box = document.createElement("div"); box.className = "operation-info"; box.style.marginBottom = "0.75rem";
+        var title = document.createElement("strong"); title.textContent = "Group " + (gi + 1) + ": " + (g.description || "Untitled");
+        box.appendChild(title);
+        for (var ti = 0; ti < g.txns.length; ti++) {
+          var t = g.txns[ti]; var line = document.createElement("div");
+          line.style.cssText = "font-size:0.8rem;margin-top:0.25rem;padding-left:1rem;";
+          if (t.type === "pay") line.textContent = "Txn " + (ti+1) + ": PAY " + (Number(t.amount)/1e6).toFixed(6) + " ALGO \u2192 " + (t.to ? t.to.substring(0,8) + "..." : "?");
+          else if (t.type === "axfer") line.textContent = "Txn " + (ti+1) + ": AXFER " + t.amount + " units (ASA " + t.assetId + ") \u2192 " + (t.to ? t.to.substring(0,8) + "..." : "?");
+          else if (t.type === "appl") {
+            var argsP = (t.args||[]).map(function(a,idx) { return typeof a==="string"&&a.length>20 ? "arg"+idx+"="+a.substring(0,12)+"..." : "arg"+idx+"="+a; }).join(", ");
+            line.textContent = "Txn " + (ti+1) + ": APPL " + (t.method||"?") + "(" + argsP + ")";
+          } else line.textContent = "Txn " + (ti+1) + ": " + t.type;
+          box.appendChild(line);
+        }
+        container.appendChild(box);
+      }
+    }
+
+    function batchSetGroupStatus(i, cls, text) {
+      var el = document.getElementById("batch-status-" + i);
+      if (!el) return;
+      while (el.firstChild) el.removeChild(el.firstChild);
+      var badge = document.createElement("span"); badge.className = "badge " + cls; badge.textContent = text;
+      el.appendChild(badge);
+    }
+
+    function batchUpdateExecuteButton() {
+      var btn = document.getElementById("batch-execute-btn");
+      btn.disabled = !(connectedAddress && batchPlan && batchPlan.groups && batchPlan.groups.length > 0 && batchVerificationPassed && batchHashVerified);
+    }
+
+    // --- Batch Plan Loading ---
+
+    async function batchLoadPlan(rawText) {
+      try {
+        var hash = await batchComputePlanHash(rawText);
+        batchRenderHash(hash);
+        log("Plan hash: " + hash);
+
+        var p = JSON.parse(rawText);
+        if (!p.appId) throw new Error("Plan missing appId");
+        if (!p.sender) throw new Error("Plan missing sender");
+        if (!Array.isArray(p.groups)) throw new Error("Plan groups must be an array");
+
+        batchPlan = p;
+        batchRenderGroups();
+        batchRenderPreview(p);
+        log("Plan loaded: " + p.groups.length + " groups", "success");
+        await batchRunVerification(p);
+      } catch (e) {
+        showError("Plan load error: " + e.message);
+      }
+    }
+
+    // --- Batch Execution ---
+
+    async function batchExecuteAll() {
+      if (!connectedAddress || !batchPlan || !peraWallet) return;
+      document.getElementById("batch-results-card").style.display = "none";
+      hideError();
+      document.getElementById("batch-execute-btn").disabled = true;
+      var results = [];
+      var network = getSelectedNetwork();
+
+      for (var i = 0; i < batchPlan.groups.length; i++) {
+        var group = batchPlan.groups[i];
+        batchSetGroupStatus(i, "badge-signed", "Signing...");
+        log("Group " + (i + 1) + " / " + batchPlan.groups.length + ": " + (group.description || "..."));
+        try {
+          var algodClient = getAlgodClient(network);
+          var sp = await algodClient.getTransactionParams().do();
+          var txns = batchBuildGroup(group, sp, batchPlan.appId, connectedAddress);
+          log("Group " + (i + 1) + " built, " + txns.length + " txns");
+
+          var result = await signAndSubmit(txns, network);
+          log("Group " + (i + 1) + " confirmed in round " + result.confirmedRound, "success");
+          batchSetGroupStatus(i, "badge-confirmed", "Confirmed R" + result.confirmedRound);
+          results.push({ group: i + 1, txId: result.txId, round: result.confirmedRound });
+        } catch (err) {
+          log("Group " + (i + 1) + " ERROR: " + (err.message || err), "error");
+          batchSetGroupStatus(i, "badge-error", "Error");
+          showError("Stopped at group " + (i + 1) + ": " + (err.message || err));
+          break;
+        }
+      }
+
+      var container = document.getElementById("batch-results-container");
+      while (container.firstChild) container.removeChild(container.firstChild);
+      for (var r = 0; r < results.length; r++) {
+        var row = document.createElement("div"); row.className = "result-value"; row.style.fontSize = "0.875rem";
+        var link = document.createElement("a");
+        link.href = "https://allo.info/tx/" + results[r].txId; link.target = "_blank"; link.textContent = results[r].txId;
+        link.style.color = "var(--success)";
+        row.appendChild(document.createTextNode("Group " + results[r].group + ": "));
+        row.appendChild(link);
+        row.appendChild(document.createTextNode(" (round " + results[r].round + ")"));
+        container.appendChild(row);
+      }
+      if (results.length > 0) document.getElementById("batch-results-card").style.display = "";
+    }
+
+    // --- Batch Init ---
+
+    async function batchInit() {
+      var params = new URLSearchParams(window.location.search);
+      var srcParam = params.get("src");
+      if (!srcParam) return;
+
+      batchMode = true;
+      log("Batch mode: loading plan from ?src=" + srcParam + "...");
+
+      // Build ABI methods map from existing abiSpec
+      batchAbiMethods = new Map();
+      if (abiSpec && abiSpec.methods) {
+        for (var i = 0; i < abiSpec.methods.length; i++) {
+          var m = abiSpec.methods[i];
+          if (m.name) batchAbiMethods.set(m.name, m);
+        }
+        log("Batch ABI loaded: " + batchAbiMethods.size + " methods");
+      }
+
+      // Hide operations section, show batch section
+      if (operationsSectionEl) operationsSectionEl.classList.add("hidden");
+      document.getElementById("batch-section").style.display = "";
+
+      // Set network from plan if needed
+      try {
+        var res = await fetch(srcParam);
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        var rawText = await res.text();
+        await batchLoadPlan(rawText);
+      } catch (e) {
+        showError("Failed to load plan from ?src=" + srcParam + ": " + e.message);
+      }
+
+      // Wire up execute button
+      document.getElementById("batch-execute-btn").addEventListener("click", batchExecuteAll);
+    }
+
+    // ======================================================================
+    // END BATCH PLAN EXECUTION
+    // ======================================================================
+
+    try {
+      init().catch(err => {
+        console.error("[wc-signer] Async init error:", err);
+        document.body.innerHTML = `<div style="color:#e74c3c;padding:2rem;font-family:monospace;background:#1a1a2e;">
+          <h2>JS Initialization Failed</h2>
+          <pre>${err.stack || err.message || err}</pre>
+        </div>`;
+      });
+    } catch (err) {
+      console.error("[wc-signer] Sync init error:", err);
+      document.body.innerHTML = `<div style="color:#e74c3c;padding:2rem;font-family:monospace;background:#1a1a2e;">
+        <h2>JS Initialization Failed</h2>
+        <pre>${err.stack || err.message || err}</pre>
+      </div>`;
+    }
+  </script>
+</body>
+</html>
