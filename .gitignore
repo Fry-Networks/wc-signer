@@ -1,2 +1,6 @@
 certs/
 testnet-wallet.txt
+.env
+.env.local
+.env.*.local
+*.bak.*
