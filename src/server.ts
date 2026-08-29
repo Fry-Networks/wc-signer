@@ -583,7 +583,7 @@ function createServer(port: number): void {
     console.log("  FryGovernance Deployment Server (HTTPS)");
     console.log("=".repeat(60));
     console.log("");
-    console.log(`  URL:      https://192.168.1.169:${port}`);
+    console.log(`  URL:      https://<internal-host>:${port}`);
     console.log(`  Deployer: ${EXPECTED_DEPLOYER}`);
     console.log(`  FRY ASA:  ${FRY_ASA_ID}`);
     console.log("");
